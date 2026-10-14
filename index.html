@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สั่งของ Hay Day</title>
+<style>
+:root{
+  --bg:#f6f4ee; --card:#ffffff; --ink:#23301f; --muted:#6b7566; --line:#e2ded0;
+  --brand:#2f7d32; --brand-ink:#ffffff; --accent:#e9a23b; --bad:#c0392b; --ok:#2f7d32; --warn:#b9770e;
+  --chip:#eef3e8; --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 18px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#141a13; --card:#1d261c; --ink:#e8efe3; --muted:#9aa896; --line:#2d3a2b; --brand:#5db760; --brand-ink:#0d1a0d;
+         --accent:#f0b254; --bad:#ff7b6b; --ok:#6fcf73; --warn:#f0b254; --chip:#243322; --shadow:none; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 'Noto Sans Thai','Sarabun',system-ui,-apple-system,'Segoe UI',sans-serif;
+     -webkit-text-size-adjust:100%}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.35rem;margin:0}
+h2{font-size:1.1rem;margin:0 0 10px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.muted{color:var(--muted);font-size:.9rem}
+.qpos{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--chip)}
+label{display:block;font-size:.88rem;color:var(--muted);margin:10px 0 4px}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+button{cursor:pointer;border:0;border-radius:10px;padding:11px 16px;background:var(--brand);color:var(--brand-ink);font-weight:600}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
+button.small{padding:6px 10px;font-size:.85rem}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1 1 140px}
+.row>.fit{flex:0 0 auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{flex:1 1 auto;padding:9px 12px;background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:500}
+.tabs button.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.bal{font-size:1.5rem;font-weight:700}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--chip);font-size:.82rem}
+.pill.ok{color:var(--ok)} .pill.bad{color:var(--bad)} .pill.warn{color:var(--warn)}
+.msg{padding:10px 12px;border-radius:10px;margin:10px 0;font-size:.93rem}
+.msg.err{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.msg.good{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.msg.info{background:var(--chip)}
+.item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.order .head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.bar{height:8px;border-radius:99px;background:var(--chip);overflow:hidden;margin:8px 0}
+.bar>i{display:block;height:100%;background:var(--brand)}
+.hide{display:none!important}
+pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--chip);padding:12px;border-radius:10px;margin:8px 0;font:inherit}
+.qbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.trow{display:flex;gap:8px;align-items:center;margin-top:6px}.trow b{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.trow input{flex:0 0 120px;width:120px}
+.qbtns button{padding:6px 12px;font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:480px){.wrap{padding:12px 12px 80px}}
+.guide-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:12px}
+@media (min-width:600px){.guide-bg{align-items:center}}
+.guide-bg.hide{display:none}
+.guide{background:var(--card);color:var(--ink);border-radius:18px;max-width:520px;width:100%;padding:20px 18px 16px;box-shadow:0 10px 40px rgba(0,0,0,.25);max-height:88vh;overflow:auto}
+.guide .gi{font-size:2.6rem;line-height:1;margin-bottom:6px}
+.guide h3{margin:0 0 8px;font-size:1.15rem}
+.guide ul{margin:6px 0 0;padding-left:20px}
+.guide li{margin:4px 0}
+.guide .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 10px}
+.guide .dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.guide .dots i.on{background:var(--brand);width:20px;border-radius:4px}
+.guide .gbtns{display:flex;gap:8px}
+.guide .gbtns button{flex:1}
+.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 4px;text-align:center;font-size:.85rem}
+.steps3 div{background:var(--chip);border-radius:10px;padding:8px 4px}
+.steps3 b{display:block;font-size:1.3rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 id="shopName">🌾 สั่งของ Hay Day</h1>
+    <div id="topRight" class="hide row" style="justify-content:flex-end;flex:0 0 auto">
+      <span id="whoami" class="muted fit"></span>
+      <button class="ghost small fit" onclick="openGuide(0)">📖 วิธีใช้</button>
+      <button class="ghost small fit" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <!-- ตั้งค่าที่อยู่เว็บ (ครั้งแรก ถ้าไม่ได้ฝังไว้ในไฟล์) -->
+  <div id="vSetup" class="card hide">
+    <h2>ตั้งค่าครั้งแรก</h2>
+    <p class="muted">วางลิงก์เว็บ (Apps Script ที่ลงท้าย /exec) ที่ร้านให้ไว้ จะจำไว้ในเครื่องนี้</p>
+    <input id="apiIn" placeholder="https://script.google.com/macros/s/.../exec" inputmode="url">
+    <div style="margin-top:10px"><button onclick="saveApi()">บันทึก</button></div>
+  </div>
+
+  <!-- เข้าสู่ระบบ / สมัคร -->
+  <div id="vAuth" class="card hide">
+    <div class="steps3" aria-label="ขั้นตอนสั่งของ">
+      <div><b>💰</b>1. เติมเงิน</div><div><b>🛒</b>2. สั่งของ</div><div><b>🤝</b>3. รับเพื่อน + ซื้อในเกม</div>
+    </div>
+    <p class="muted" style="margin:4px 0 12px">สมัครฟรี ใช้แค่ชื่อผู้ใช้กับรหัสผ่าน · <a href="#" onclick="openGuide(0);return false">ดูวิธีใช้ทั้งหมด</a></p>
+    <div class="tabs" style="margin-bottom:6px">
+      <button id="tLogin" class="on" onclick="authTab('login')">เข้าสู่ระบบ</button>
+      <button id="tReg" onclick="authTab('reg')">สมัครใหม่</button>
+    </div>
+    <form id="fLogin" onsubmit="return doLogin(event)">
+      <label for="lu">ชื่อผู้ใช้</label><input id="lu" autocomplete="username" autocapitalize="none" required>
+      <label for="lp">รหัสผ่าน</label><input id="lp" type="password" autocomplete="current-password" required>
+      <div style="margin-top:12px"><button type="submit" id="bLogin">เข้าสู่ระบบ</button></div>
+    </form>
+    <form id="fReg" class="hide" onsubmit="return doRegister(event)">
+      <div id="promoReg"></div>
+      <label for="ru">ชื่อผู้ใช้ (a-z 0-9 _ ยาว 3-20)</label><input id="ru" autocomplete="username" autocapitalize="none" required>
+      <label for="rp">รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="rp" type="password" autocomplete="new-password" minlength="6" required>
+      <label for="rd">ชื่อเรียก (ไม่ใส่ก็ได้)</label><input id="rd" maxlength="30">
+      <div style="margin-top:12px"><button type="submit" id="bReg">สมัครและเข้าใช้งาน</button></div>
+    </form>
+    <div id="authMsg"></div>
+  </div>
+
+  <!-- หน้าหลัก -->
+  <div id="vMain" class="hide">
+    <div class="card row" style="align-items:center">
+      <div><div class="muted">ยอดเงินคงเหลือ</div><div class="bal"><span id="balance">0</span> บาท</div></div>
+      <div class="fit"><button onclick="go('wallet')">+ เติมเงิน</button></div>
+    </div>
+    <div id="activeBanner"></div>
+    <div class="tabs">
+      <button id="tab_order" class="on" onclick="go('order')">🛒 สั่งของ</button>
+      <button id="tab_orders" onclick="go('orders')">📦 ออเดอร์ของฉัน</button>
+      <button id="tab_wallet" onclick="go('wallet')">💰 กระเป๋าเงิน</button>
+      <button id="tab_acct" onclick="go('acct')">👤 บัญชี</button>
+    </div>
+
+    <section id="p_order">
+      <div class="card">
+        <h2>สั่งของ</h2>
+        <label for="selItem">สินค้า</label>
+        <select id="selItem" onchange="calc()"></select>
+        <div id="itemInfo" class="muted" style="margin-top:6px"></div>
+        <label for="qty">จำนวน (ทวีคูณของ 500) — หลายแท็กแก้จำนวนรายแท็กได้ด้านล่าง</label>
+        <input id="qty" type="number" inputmode="numeric" min="500" step="500" value="500" oninput="calc()">
+        <div class="qbtns" id="qbtns"></div>
+        <label for="selTag">แท็กที่เคยใช้ (เลือกเพื่อเพิ่มลงช่องด้านล่าง)</label>
+        <select id="selTag" onchange="pickTag()"></select>
+        <label for="oTag">แท็กฟาร์มที่จะรับของ (เช่น #P2Y8QLG) — หลายฟาร์มคั่นด้วยเว้นวรรคหรือ ,</label>
+        <input id="oTag" autocapitalize="characters" autocomplete="off" oninput="calc()" placeholder="#P2Y8QLG  #Q8LL2VC">
+        <div id="tagInfo" class="muted"></div>
+        <div id="tagRows"></div>
+        <p class="muted">ใส่หลายแท็ก = แยกเป็นออเดอร์ละแท็ก ตั้งจำนวนแต่ละแท็กได้ · บอทใช้แท็กส่งคำขอเป็นเพื่อนในเกม ตรวจให้ถูกก่อนสั่ง ถ้าพิมพ์ผิดออเดอร์จะส่งไม่สำเร็จ</p>
+        <div id="priceBox" class="msg info" style="margin-top:14px"></div>
+        <div id="orderMsg"></div>
+        <button id="bOrder" onclick="doOrder()" style="width:100%">สั่งซื้อ</button>
+        <p class="muted" style="margin-bottom:0">เมื่อถึงคิว บอทจะส่งคำขอเป็นเพื่อนถึงคุณในเกม — กด "รับ" แล้วของจะขึ้นที่ร้านริมทางให้ซื้อทีละถาด ตัดเงินทันทีที่สั่ง</p>
+      </div>
+    </section>
+
+    <section id="p_orders" class="hide">
+      <div id="ordersBox"></div>
+    </section>
+
+    <section id="p_wallet" class="hide">
+      <div class="card" id="qrCard">
+        <h2>เติมเงินด้วย QR พร้อมเพย์</h2>
+        <label for="qrAmt">จำนวนเงินที่จะเติม (บาท)</label>
+        <input id="qrAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="เช่น 300">
+        <div class="qbtns" id="qrQuick"></div>
+        <button onclick="makeQR()" style="width:100%;margin-top:8px">สร้าง QR</button>
+        <div id="qrBox" class="hide" style="text-align:center;margin-top:14px">
+          <div id="qrImg" style="display:inline-block;background:#fff;padding:12px;border-radius:12px"></div>
+          <div style="margin-top:8px"><b id="qrAmtTxt"></b></div>
+          <div class="muted">สแกนด้วยแอปธนาคารไหนก็ได้ ยอดเงินขึ้นให้เอง</div>
+        </div>
+        <label for="slipFile" style="margin-top:14px">โอนแล้ว แนบรูปสลิป</label>
+        <input id="slipFile" type="file" accept="image/*">
+        <div id="slipMsg"></div>
+        <button id="bSlip" onclick="sendSlip()" style="width:100%;margin-top:6px">ส่งสลิป</button>
+        <p class="muted" id="slipNote">ระบบตรวจสลิปให้อัตโนมัติ ผ่านแล้วยอดเข้ากระเป๋าทันที (1 สลิปใช้ได้ครั้งเดียว)</p>
+      </div>
+      <div class="card">
+        <details id="manualBox">
+          <summary style="cursor:pointer"><b>โอนแบบอื่น / ไม่มีสลิป</b></summary>
+          <div id="payInfoBox"></div>
+          <label for="tuAmt">จำนวนเงินที่โอน (บาท)</label>
+          <input id="tuAmt" type="number" inputmode="decimal" min="1" step="1">
+          <label for="tuInfo">ข้อมูลการโอน (เวลาที่โอน / 4 ตัวท้ายบัญชีต้นทาง)</label>
+          <input id="tuInfo" maxlength="120" placeholder="เช่น โอนเวลา 14:32 จากบัญชีลงท้าย 1234">
+          <div id="tuMsg"></div>
+          <button onclick="doTopup()" style="width:100%;margin-top:6px">แจ้งโอนเงิน</button>
+          <p class="muted">โอนเงินตามข้อมูลด้านบนก่อน แล้วค่อยกดแจ้ง แอดมินตรวจแล้วยอดจะเข้ากระเป๋า</p>
+        </details>
+      </div>
+      <div class="card"><h2>คำขอเติมเงิน</h2><div id="topupList"></div></div>
+      <div class="card"><h2>ประวัติเงินเข้า-ออก</h2><div id="ledgerList"></div></div>
+    </section>
+
+    <section id="p_acct" class="hide">
+      <div class="card">
+        <h2>แท็กที่เคยใช้</h2><p class="muted">ระบบจำแท็กจากการสั่งของไว้ให้เลือกครั้งต่อไป</p>
+        <div id="tagList"></div><div id="tagMsg"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="guideBg" class="guide-bg hide" onclick="if(event.target===this)closeGuide()">
+  <div class="guide" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+    <div id="gBody"></div>
+    <div class="dots" id="gDots"></div>
+    <div class="gbtns">
+      <button class="ghost" id="gBack" onclick="stepGuide(-1)">ย้อนกลับ</button>
+      <button id="gNext" onclick="stepGuide(1)">ถัดไป</button>
+    </div>
+    <div style="text-align:center;margin-top:8px"><a href="#" class="muted" onclick="closeGuide();return false">ข้ามคำแนะนำ</a></div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ใส่ลิงก์เว็บ Apps Script (/exec) ตรงนี้ได้เลย ถ้าเว้นว่าง หน้าเว็บจะถามครั้งแรกแล้วจำไว้ในเครื่อง
+const API_URL = "";
+
+let API = API_URL, TOKEN = "", ME = null, CATALOG = [], TIMER = null, SHOP = {payInfo: ""};
+const $ = id => document.getElementById(id);
+const fmt = n => (Number(n) || 0).toLocaleString("th-TH", {maximumFractionDigits: 2});
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function store(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+function load(k){ try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+function show(id, on){ $(id).classList.toggle("hide", !on); }
+function note(id, text, kind){ $(id).innerHTML = text ? '<div class="msg ' + (kind || "info") + '">' + esc(text) + '</div>' : ""; }
+
+async function api(action, params){
+  let res;
+  try {
+    res = await fetch(API, {method: "POST", headers: {"Content-Type": "text/plain;charset=utf-8"},
+                            body: JSON.stringify(Object.assign({action: action, token: TOKEN}, params || {}))});
+  } catch (e) { throw new Error("ต่อเว็บไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่"); }
+  let d;
+  try { d = await res.json(); } catch (e) { throw new Error("เว็บตอบกลับผิดรูปแบบ"); }
+  if (!d.ok) {
+    if (/เข้าสู่ระบบใหม่|หมดอายุ/.test(d.error || "")) { sessionEnd(); }
+    throw new Error(d.error || "ผิดพลาด");
+  }
+  return d;
+}
+
+/* ---------- เริ่มต้น ---------- */
+async function boot(){
+  if (!API) API = load("hd_api");
+  if (!API) { show("vSetup", true); return; }
+  show("vSetup", false);
+  try {
+    const d = await api("shop_info");
+    SHOP.payInfo = d.payInfo || "";
+    SHOP.promptpay = d.promptpay || ""; SHOP.autoSlip = !!d.autoSlip; SHOP.contact = d.contact || "";
+    SHOP.signupBonus = d.signupBonus || null;
+    paintPromo();
+    if (d.shopName) { $("shopName").textContent = "🌾 " + d.shopName; document.title = d.shopName; }
+  } catch (e) { show("vAuth", true); note("authMsg", e.message, "err"); return; }
+  TOKEN = load("hd_token");
+  if (TOKEN) {
+    try { ME = (await api("shop_me")).user; enter(); return; } catch (e) { TOKEN = ""; store("hd_token", null); }
+  }
+  show("vAuth", true);
+}
+function saveApi(){
+  const v = $("apiIn").value.trim();
+  if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(v)) { alert("ลิงก์ต้องขึ้นต้น https://script.google.com/ และลงท้าย /exec"); return; }
+  API = v; store("hd_api", v); boot();
+}
+function authTab(t){
+  $("tLogin").classList.toggle("on", t === "login"); $("tReg").classList.toggle("on", t === "reg");
+  show("fLogin", t === "login"); show("fReg", t === "reg"); note("authMsg", "");
+}
+async function doLogin(ev){
+  ev.preventDefault(); note("authMsg", ""); $("bLogin").disabled = true;
+  try {
+    const d = await api("shop_login", {username: $("lu").value, password: $("lp").value});
+    TOKEN = d.token; ME = d.user; store("hd_token", TOKEN); enter();
+  } catch (e) { note("authMsg", e.message, "err"); }
+  $("bLogin").disabled = false; return false;
+}
+let JUST_REGISTERED = false;
+async function doRegister(ev){
+  ev.preventDefault(); note("authMsg", ""); $("bReg").disabled = true;
+  try {
+    const d = await api("shop_register", {username: $("ru").value, password: $("rp").value, display: $("rd").value});
+    TOKEN = d.token; ME = d.user; store("hd_token", TOKEN); JUST_REGISTERED = true; enter();
+    if (d.bonus > 0) setTimeout(() => alert("🎁 ได้รับเครดิตฟรี " + d.bonus.toLocaleString() + " บาท เข้ากระเป๋าแล้ว ใช้สั่งของได้เลย"), 400);
+  } catch (e) { note("authMsg", e.message, "err"); }
+  $("bReg").disabled = false; return false;
+}
+function paintPromo(){
+  const b = SHOP.signupBonus;
+  const box = $("promoReg");
+  if (!box) return;
+  box.innerHTML = b && b.amount > 0
+    ? '<div class="msg good">🎁 สมัครตอนนี้รับเครดิตฟรี <b>' + esc(Number(b.amount).toLocaleString()) + " บาท</b>" +
+      (b.until ? " (ถึง " + esc(String(b.until).slice(0, 16)) + ")" : "") + (b.left != null ? " · เหลือ " + esc(b.left) + " สิทธิ์" : "") + "</div>"
+    : "";
+}
+function sessionEnd(){
+  TOKEN = ""; ME = null; store("hd_token", null);
+  if (TIMER) { clearInterval(TIMER); TIMER = null; }
+  show("vMain", false); show("topRight", false); show("vAuth", true);
+}
+async function logout(){ try { await api("shop_logout"); } catch (e) {} sessionEnd(); }
+
+/* ---------- หน้าหลัก ---------- */
+function enter(){
+  show("vAuth", false); show("vMain", true); show("topRight", true);
+  if (JUST_REGISTERED || !load("hd_guided")) { JUST_REGISTERED = false; setTimeout(() => openGuide(0), 300); }
+  $("whoami").textContent = ME.display || ME.username;
+  paintMe(); go("order"); loadCatalog();
+  if (TIMER) clearInterval(TIMER);
+  TIMER = setInterval(tick, 15000);
+}
+function paintMe(){
+  $("balance").textContent = fmt(ME.balance);
+  const sel = $("selTag"), keep = sel.value;
+  sel.innerHTML = '<option value="">— กรอกใหม่ —</option>' + ME.tags.map(t => '<option value="' + esc(t.tag) + '">' + esc(t.tag) + (t.name ? " — " + esc(t.name) : "") + "</option>").join("");
+  if (keep) sel.value = keep;
+  $("tagList").innerHTML = ME.tags.map(t =>
+    '<div class="item"><div><b>' + esc(t.tag) + '</b><div class="muted">' + esc(t.name) + '</div></div>' +
+    (true ? '<button class="ghost small fit" data-tag="' + esc(t.tag) + '" onclick="rmTag(this.dataset.tag)">ลบ</button>' : "") + "</div>").join("");
+  calc();
+}
+function pickTag(){
+  const t = ME.tags.find(x => x.tag === $("selTag").value);
+  if (!t) return;
+  const cur = tagsIn();
+  if (!cur.some(x => tagKey(x) === tagKey(t.tag))) $("oTag").value = cur.concat([t.tag]).join(" ");
+  $("selTag").value = ""; calc();
+}
+const tagKey = t => String(t || "").toUpperCase().replace(/[#\s]/g, "");
+function tagsIn(){                              // แท็กในช่อง → ["#AAA", "#BBB"] (ตัดซ้ำ)
+  const out = [], seen = {};
+  $("oTag").value.split(/[\s,;]+/).filter(Boolean).forEach(t => {
+    const k = tagKey(t); if (k && !seen[k]) { seen[k] = 1; out.push("#" + k); }
+  });
+  return out;
+}
+let curPage = "order";
+function go(p){
+  curPage = p;
+  ["order", "orders", "wallet", "acct"].forEach(k => { show("p_" + k, k === p); $("tab_" + k).classList.toggle("on", k === p); });
+  if (p === "orders") loadOrders();
+  if (p === "wallet") loadWallet();
+  if (p === "order") loadCatalog();
+}
+async function tick(){
+  if (document.hidden) return;
+  try {
+    ME = (await api("shop_me")).user; paintMe();
+    await loadOrders(curPage !== "orders");
+  } catch (e) {}
+}
+
+/* ---------- สั่งของ ---------- */
+async function loadCatalog(){
+  try {
+    CATALOG = (await api("shop_catalog")).items;
+    const sel = $("selItem"), keep = sel.value;
+    sel.innerHTML = CATALOG.length
+      ? CATALOG.map(i => '<option value="' + esc(i.item) + '">' + esc(i.item) + "</option>").join("")
+      : '<option value="">ตอนนี้ยังไม่มีสินค้าที่สั่งได้</option>';
+    if (keep && CATALOG.some(i => i.item === keep)) sel.value = keep;
+    calc();
+  } catch (e) { note("orderMsg", e.message, "err"); }
+}
+// ราคาเซ็ต 500 / 1,000 / 10,000 (วิธีคิดเดียวกับเว็บหลังบ้าน)
+function priceOf(c, qty){
+  if (!c || qty < 500 || qty % 500) return null;
+  let rest = qty, total = 0;
+  if (c.p10000 > 0) { total += Math.floor(rest / 10000) * c.p10000; rest %= 10000; }
+  if (c.p1000 > 0) { total += Math.floor(rest / 1000) * c.p1000; rest %= 1000; }
+  else if (rest >= 1000 && c.p500 > 0) { total += Math.floor(rest / 500) * c.p500; rest %= 500; }
+  if (rest >= 500) { if (c.p500 <= 0) return null; total += Math.floor(rest / 500) * c.p500; rest %= 500; }
+  return rest === 0 && total > 0 ? Math.round(total * 100) / 100 : null;
+}
+// จำนวนรายแท็ก: ไม่ได้แก้เอง = ใช้ช่องจำนวนด้านบน
+let PER = {}, ROWS_SIG = "";
+function lines(){                               // → [{tag, qty}] ตามลำดับในช่องแท็ก
+  const d = parseInt($("qty").value, 10) || 0;
+  const ts = tagsIn();
+  if (ts.length < 2) return ts.map(t => ({tag: t, qty: d}));       // แท็กเดียว = ใช้ช่องจำนวนด้านบน
+  return ts.map(t => ({tag: t, qty: PER[tagKey(t)] != null ? PER[tagKey(t)] : d}));
+}
+function drawRows(tags){
+  const sig = tags.join(" ");
+  if (sig === ROWS_SIG) return;
+  ROWS_SIG = sig;
+  const box = $("tagRows");
+  if (tags.length < 2) { box.innerHTML = ""; return; }
+  const d = parseInt($("qty").value, 10) || 0;
+  box.innerHTML = tags.map((t, i) => {
+    const k = tagKey(t), v = PER[k] != null ? PER[k] : d;
+    return '<div class="trow"><b>' + (i + 1) + ". " + esc(t) + '</b><input type="number" inputmode="numeric" min="500" step="500" data-k="' + esc(k) +
+           '" value="' + v + '" oninput="perQty(this)" aria-label="จำนวนของ ' + esc(t) + '"></div>';
+  }).join("");
+}
+function perQty(el){ const v = parseInt(el.value, 10); PER[el.dataset.k] = isNaN(v) ? 0 : v; calc(); }
+function syncRows(){                            // ช่องจำนวนด้านบนเปลี่ยน → แถวที่ไม่ได้แก้เองเปลี่ยนตาม
+  const d = parseInt($("qty").value, 10) || 0;
+  document.querySelectorAll("#tagRows input").forEach(el => { if (PER[el.dataset.k] == null) el.value = d; });
+}
+function calc(){
+  const c = CATALOG.find(i => i.item === $("selItem").value);
+  const q = $("qbtns");
+  q.innerHTML = c ? [500, 1000, 5000, 10000].filter(n => n <= c.available).map(n => '<button class="ghost small" type="button" onclick="setQty(' + n + ')">' + fmt(n) + "</button>").join("") : "";
+  $("itemInfo").textContent = c
+    ? "มีของพร้อมส่ง " + fmt(c.available) + " ชิ้น · 500 ชิ้น " + fmt(c.p500) + " บาท" + (c.p1000 ? " · 1,000 ชิ้น " + fmt(c.p1000) + " บาท" : "") + (c.p10000 ? " · 10,000 ชิ้น " + fmt(c.p10000) + " บาท" : "") : "";
+  const box = $("priceBox"), btn = $("bOrder");
+  const tags = tagsIn();
+  drawRows(tags); syncRows();
+  const ls = tags.length ? lines() : [{tag: "", qty: parseInt($("qty").value, 10) || 0}];
+  const bad = tags.filter(t => !/^#[A-Z0-9]{4,12}$/.test(t));
+  $("tagInfo").innerHTML = tags.length > 1
+    ? "ลำดับการส่ง: แท็กแรกได้ก่อน แล้วไล่ตามลำดับ · อยากให้แท็กไหนได้ก่อน ย้ายไปไว้หน้าสุดในช่อง" : "";
+  const stop = t => { box.innerHTML = t; btn.disabled = true; };
+  if (!c) return stop("เลือกสินค้า");
+  if (bad.length) return stop('<span style="color:var(--bad)">แท็กไม่ถูกต้อง: ' + esc(bad.join(", ")) + "</span>");
+  if (tags.length > 10) return stop("สั่งได้ครั้งละไม่เกิน 10 แท็ก");
+  let price = 0, sum = 0;
+  for (const l of ls) {
+    const p = priceOf(c, l.qty);
+    if (p == null) return stop("จำนวน" + (l.tag && tags.length > 1 ? "ของ " + esc(l.tag) : "") + " ต้องเป็นทวีคูณของ 500");
+    price += p; sum += l.qty;
+  }
+  price = Math.round(price * 100) / 100;
+  if (sum > c.available) return stop("ของเหลือ " + fmt(c.available) + " ชิ้น (ต้องใช้ " + fmt(sum) + ") ลดจำนวนลง");
+  const short = price - (ME ? ME.balance : 0);
+  box.innerHTML = (tags.length > 1 ? "รวม " + fmt(sum) + " ชิ้น · " + tags.length + " แท็ก · " : "") + "ราคารวม <b>" + fmt(price) + " บาท</b>" +
+    (short > 0 ? ' · <span style="color:var(--bad)">ยอดไม่พอ ขาดอีก ' + fmt(short) + " บาท</span>" : "");
+  btn.disabled = short > 0;
+  btn.textContent = "สั่งซื้อ · หักเงิน " + fmt(price) + " บาท";
+}
+function setQty(n){ $("qty").value = n; calc(); }
+async function doOrder(){
+  const item = $("selItem").value, ls = lines();
+  if (!ls.length) { note("orderMsg", "ใส่แท็กฟาร์มที่จะรับของก่อน", "err"); return; }
+  const c = CATALOG.find(i => i.item === item);
+  let price = 0;
+  for (const l of ls) { const p = priceOf(c, l.qty); if (p == null) return; price += p; }
+  price = Math.round(price * 100) / 100;
+  const multi = ls.length > 1;
+  if (!confirm("ยืนยันสั่ง " + item +
+               (multi ? "\n\nลำดับการส่ง (แท็กแรกได้ก่อน):\n" + ls.map((l, i) => "  " + (i + 1) + ". " + l.tag + " — " + fmt(l.qty) + " ชิ้น").join("\n")
+                      : " " + fmt(ls[0].qty) + " ชิ้น\nส่งให้ " + ls[0].tag) + "\n\nหักเงิน " + fmt(price) + " บาททันที")) return;
+  $("bOrder").disabled = true; note("orderMsg", "");
+  try {
+    const d = await api("shop_order", {item: item, lines: ls, qty: ls[0].qty, tags: ls.map(l => l.tag), tag: ls[0].tag});
+    ME.balance = d.balance; paintMe();
+    const ids = (d.orders || [{orderId: d.orderId}]).map(o => o.orderId).join(", ");
+    if (!d.orders && multi) {                   // เว็บหลังบ้านยังเป็นรุ่นเก่า (รับได้แท็กเดียว)
+      d.partial = true; d.error = "ระบบรับได้แค่แท็กแรก (" + ls[0].tag + ") สั่งแท็กที่เหลือแยกอีกครั้ง";
+    }
+    note("orderMsg", d.partial ? "⚠ " + d.error + " · เลขที่ " + ids
+                               : "สั่งสำเร็จ เลขที่ " + ids + (d.orders && d.orders.length > 1
+                                   ? " — ส่งตามลำดับ: " + d.orders.map((o, i) => (i + 1) + ". " + o.tag + (o.qty ? " (" + fmt(o.qty) + ")" : "")).join(" → ")
+                                   : "") + " — ดูคิวที่ 'ออเดอร์ของฉัน'", d.partial ? "err" : "good");
+    if (!d.partial) { PER = {}; ROWS_SIG = ""; }
+    loadCatalog();
+  } catch (e) { note("orderMsg", e.message, "err"); }
+  calc();
+}
+
+/* ---------- ออเดอร์ ---------- */
+const ACTIVE = ["queued", "working", "wait_accept", "listing", "problem"];
+async function loadOrders(silent){
+  let list;
+  try { list = (await api("shop_orders")).orders; } catch (e) { if (!silent) $("ordersBox").innerHTML = '<div class="msg err">' + esc(e.message) + "</div>"; return; }
+  const act = list.filter(o => o.status === "wait_accept" || o.status === "working");
+  const qd = list.filter(o => o.status === "queued" && o.queuePos != null).sort((a, b) => a.queuePos - b.queuePos)[0];
+  $("activeBanner").innerHTML = act.length
+    ? '<div class="msg" style="background:color-mix(in srgb,var(--accent) 22%,transparent)"><b>👉 ' + esc(act[0].message) + "</b></div>"
+    : qd ? '<div class="msg info">🕒 ' + queueText(qd) + "</div>" : "";
+  if (silent) return;
+  $("ordersBox").innerHTML = tagOrderCard(list) + (list.length ? list.map(o => {
+    const pct = o.qty ? Math.min(100, Math.round(o.delivered * 100 / o.qty)) : 0;
+    const cls = o.status === "done" ? "ok" : (o.status === "cancelled" || o.status === "problem") ? "bad" : "warn";
+    return '<div class="card order"><div class="head"><b>' + esc(o.item) + " × " + fmt(o.qty) + '</b><span class="pill ' + cls + '">' + esc(o.statusTh) + "</span></div>" +
+      '<div class="muted">' + esc(o.id) + " · " + esc(o.created) + " · ส่งให้ " + esc(o.tag) + "</div>" +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="muted">ส่งแล้ว ' + fmt(o.delivered) + " / " + fmt(o.qty) + " ชิ้น</div>" +
+      (o.status === "queued" && o.queuePos != null ? '<div class="qpos">' + queueText(o) + "</div>" : "") +
+      (o.message ? '<div style="margin-top:8px">' + esc(o.message) + "</div>" : "") + "</div>";
+  }).join("") : '<div class="card muted">ยังไม่มีออเดอร์</div>');
+}
+// ลูกค้ามีหลายแท็กค้างส่ง → บอกว่าแท็กไหนได้ก่อน (บอทส่งทีละแท็กตามคิว)
+function tagOrderCard(list){
+  const SERV = ["working", "wait_accept", "listing"], by = {};
+  list.forEach(o => {
+    if (o.status !== "queued" && SERV.indexOf(o.status) < 0) return;
+    const k = String(o.tag || "").toUpperCase();
+    const r = SERV.indexOf(o.status) >= 0 ? 0 : (o.queuePos == null ? 9999 : o.queuePos);
+    const cur = by[k] || (by[k] = {tag: o.tag, r: r, st: "", n: 0});
+    cur.n += 1;
+    if (r < cur.r) cur.r = r;
+    if (SERV.indexOf(o.status) >= 0) cur.st = o.statusTh;          // แท็กที่บอทกำลังทำ → โชว์สถานะจริง
+  });
+  const rows = Object.values(by).sort((a, b) => a.r - b.r);
+  if (rows.length < 2) return "";
+  return '<div class="card"><h2>ลำดับส่งแท็กของคุณ</h2><ol style="margin:0;padding-left:22px">' + rows.map(x =>
+    "<li><b>" + esc(x.tag) + "</b> — " + (x.r === 0 ? "<b>" + esc(x.st || "ถึงคิวแล้ว") + "</b>" : x.r === 9999 ? "รอคิว" : "คิวที่ " + x.r) +
+    (x.n > 1 ? ' <span class="muted">(' + x.n + " ออเดอร์)</span>" : "") + "</li>").join("") +
+    '</ol><div class="muted" style="margin-top:6px">บอทส่งทีละแท็กตามลำดับนี้ · ถ้าแท็กไหนไม่กดรับเพื่อนใน 5 นาที แท็กนั้นจะถูกย้ายไปท้ายคิว</div></div>';
+}
+function queueText(o){
+  if (o.queuePos === 0) return "<b>ถึงคิวคุณแล้ว</b> — บอทกำลังส่งออเดอร์อื่นของคุณอยู่ ออเดอร์นี้ส่งต่อทันที";
+  return "คุณอยู่<b>คิวที่ " + o.queuePos + "</b>" + (o.queueAhead ? " · รออีก <b>" + o.queueAhead + "</b> คิวก่อนถึงคุณ" : " · <b>คิวถัดไป</b>") +
+         '<div class="muted">ลำดับอาจขยับได้ ถ้าลูกค้าก่อนหน้าไม่กดรับเพื่อน จะถูกย้ายไปท้ายคิว</div>';
+}
+
+/* ---------- QR พร้อมเพย์ + สลิป ---------- */
+function crc16(s){ let c = 0xFFFF; for (let i = 0; i < s.length; i++){ c ^= s.charCodeAt(i) << 8; for (let j = 0; j < 8; j++){ c = (c & 0x8000) ? ((c << 1) ^ 0x1021) : (c << 1); c &= 0xFFFF; } } return c.toString(16).toUpperCase().padStart(4, "0"); }
+function ppPayload(id, amount){
+  const f = (t, v) => t + String(v.length).padStart(2, "0") + v;
+  let acc = String(id).replace(/\D/g, ""), sub;
+  if (acc.length >= 15) sub = f("03", acc);                  // e-Wallet
+  else if (acc.length >= 13) sub = f("02", acc);             // เลขบัตร / เลขผู้เสียภาษี
+  else sub = f("01", ("0000000000000" + acc.replace(/^0/, "66")).slice(-13));   // เบอร์มือถือ
+  const p = f("00", "01") + f("01", amount ? "12" : "11") + f("29", f("00", "A000000677010111") + sub) +
+            f("58", "TH") + f("53", "764") + (amount ? f("54", amount.toFixed(2)) : "") + "6304";
+  return p + crc16(p);
+}
+function makeQR(){
+  const amt = Math.round((parseFloat($("qrAmt").value) || 0) * 100) / 100;
+  if (!(amt >= 1)) { note("slipMsg", "ใส่จำนวนเงินก่อน", "err"); return; }
+  if (!SHOP.promptpay) { note("slipMsg", "ร้านยังไม่ได้ตั้งพร้อมเพย์", "err"); return; }
+  note("slipMsg", "");
+  $("qrImg").innerHTML = "";
+  try {
+    new QRCode($("qrImg"), {text: ppPayload(SHOP.promptpay, amt), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M});
+  } catch (e) { note("slipMsg", "สร้าง QR ไม่ได้ (โหลดตัวสร้าง QR ไม่สำเร็จ) ลองรีเฟรชหน้า", "err"); return; }
+  $("qrAmtTxt").textContent = "ยอดโอน " + fmt(amt) + " บาท";
+  show("qrBox", true);
+}
+function shrinkImage(file){
+  return new Promise((ok, bad) => {
+    const fr = new FileReader();
+    fr.onerror = () => bad(new Error("อ่านไฟล์ไม่ได้"));
+    fr.onload = () => {
+      const im = new Image();
+      im.onerror = () => bad(new Error("ไฟล์นี้ไม่ใช่รูป"));
+      im.onload = () => {
+        const k = Math.min(1, 1400 / Math.max(im.width, im.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        ok(c.toDataURL("image/jpeg", 0.88));
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function sendSlip(){
+  const f = $("slipFile").files[0];
+  const amt = parseFloat($("qrAmt").value) || 0;
+  if (!(amt >= 1)) { note("slipMsg", "ใส่จำนวนเงินที่โอน (ยอดเดียวกับที่สร้าง QR) ก่อน", "err"); return; }
+  if (!f) { note("slipMsg", "เลือกรูปสลิปก่อน", "err"); return; }
+  if (!/^image\//.test(f.type)) { note("slipMsg", "ไฟล์นี้ไม่ใช่รูป", "err"); return; }
+  if (f.size > 15 * 1024 * 1024) { note("slipMsg", "รูปใหญ่เกินไป", "err"); return; }
+  $("bSlip").disabled = true; note("slipMsg", "กำลังตรวจสลิป...", "info");
+  try {
+    const slip = await shrinkImage(f);
+    const d = await api("shop_topup_slip", {slip: slip, amount: $("qrAmt").value});
+    if (d.status === "approved") {
+      note("slipMsg", "✔ เติมเงิน " + fmt(d.amount) + " บาท เข้ากระเป๋าแล้ว" +
+           (d.slip ? " (เลขอ้างอิง " + d.slip.transRef + (d.slip.sender ? " · จาก " + d.slip.sender : "") + ")" : ""), "good");
+      ME.balance = d.balance; paintMe();
+    } else {
+      note("slipMsg", "ส่งสลิปแล้ว (" + d.id + ") รอแอดมินตรวจ" + (d.why ? " — " + d.why : ""), "info");
+    }
+    $("slipFile").value = ""; show("qrBox", false); loadWallet();
+  } catch (e) { note("slipMsg", e.message, "err"); }
+  $("bSlip").disabled = false;
+}
+
+/* ---------- กระเป๋าเงิน ---------- */
+async function loadWallet(){
+  show("qrCard", !!SHOP.promptpay);
+  if (!SHOP.promptpay) $("manualBox").open = true;
+  $("slipNote").textContent = SHOP.autoSlip ? "ระบบตรวจสลิปให้อัตโนมัติ ผ่านแล้วยอดเข้ากระเป๋าทันที (1 สลิปใช้ได้ครั้งเดียว)"
+                                            : "ส่งสลิปแล้วแอดมินจะตรวจและเติมยอดให้";
+  if (!$("qrQuick").innerHTML) $("qrQuick").innerHTML = [100, 300, 500, 1000].map(n =>
+    '<button class="ghost small" onclick="$(\'qrAmt\').value=' + n + '">' + n + "</button>").join("");
+  $("payInfoBox").innerHTML = SHOP.payInfo ? '<div class="muted">โอนเงินมาที่</div><pre class="pay">' + esc(SHOP.payInfo) + "</pre>"
+                                           : '<div class="msg info">ร้านยังไม่ได้ใส่ข้อมูลบัญชีรับเงิน ติดต่อแอดมิน</div>';
+  try {
+    const d = await api("shop_ledger");
+    const tp = {pending: ["รอตรวจ", "warn"], approved: ["อนุมัติแล้ว", "ok"], rejected: ["ไม่อนุมัติ", "bad"]};
+    $("topupList").innerHTML = d.topups.length ? d.topups.map(t =>
+      '<div class="item"><div><b>' + fmt(t.amount) + ' บาท</b><div class="muted">' + esc(t.id) + " · " + esc(t.time) + (t.note ? " · " + esc(t.note) : "") +
+      '</div></div><span class="pill ' + tp[t.status][1] + '">' + tp[t.status][0] + "</span></div>").join("") : '<div class="muted">ยังไม่มี</div>';
+    const ty = {topup: "เติมเงิน", order: "สั่งของ", refund: "คืนเงิน", adjust: "ปรับยอด", bonus: "เครดิตฟรี"};
+    $("ledgerList").innerHTML = d.ledger.length ? "<table>" + d.ledger.map(l =>
+      "<tr><td>" + esc(l.time.slice(5, 16)) + "<div class='muted'>" + esc(ty[l.type] || l.type) + (l.note ? " · " + esc(l.note) : "") + "</div></td>" +
+      '<td class="num" style="color:' + (l.amount >= 0 ? "var(--ok)" : "var(--bad)") + '">' + (l.amount >= 0 ? "+" : "") + fmt(l.amount) +
+      "<div class='muted'>คงเหลือ " + fmt(l.balance) + "</div></td></tr>").join("") + "</table>" : '<div class="muted">ยังไม่มี</div>';
+  } catch (e) { $("ledgerList").innerHTML = '<div class="msg err">' + esc(e.message) + "</div>"; }
+}
+async function doTopup(){
+  note("tuMsg", "");
+  try {
+    const d = await api("shop_topup", {amount: $("tuAmt").value, info: $("tuInfo").value});
+    note("tuMsg", "แจ้งโอนแล้ว (" + d.id + ") รอแอดมินตรวจสอบ", "good");
+    $("tuAmt").value = ""; $("tuInfo").value = ""; loadWallet();
+  } catch (e) { note("tuMsg", e.message, "err"); }
+}
+
+/* ---------- คำแนะนำการใช้งาน ---------- */
+const GUIDE = [
+  {i: "👋", t: "ยินดีต้อนรับ", b: () => "<p>สั่งของ Hay Day ที่นี่ได้ตลอด ระบบส่งของให้อัตโนมัติผ่าน <b>ร้านริมทาง</b> ในเกม</p>" +
+     "<ul><li>💰 เติมเงินเข้ากระเป๋า</li><li>🛒 เลือกของ + ใส่แท็กฟาร์มที่จะรับ</li><li>🕒 รอคิว (ดูลำดับคิวได้ในเว็บ)</li><li>🤝 กดรับเพื่อนในเกม แล้วซื้อของที่ร้านริมทาง</li></ul>"},
+  {i: "💰", t: "1. เติมเงิน", b: () => "<ul><li>ไปแท็บ <b>กระเป๋าเงิน</b> (หรือปุ่ม <b>+ เติมเงิน</b>)</li>" +
+     (SHOP.promptpay ? "<li>ใส่ยอด → กด <b>สร้าง QR</b> → สแกนจ่ายในแอปธนาคาร</li><li>แนบรูปสลิป → กด <b>ส่งสลิป</b>" +
+       (SHOP.autoSlip ? " ระบบตรวจให้อัตโนมัติ ยอดเข้าทันที" : " แอดมินตรวจแล้วยอดเข้า") + "</li><li>ใส่ยอดให้ตรงกับที่โอนจริง · สลิป 1 ใบใช้ได้ครั้งเดียว</li>"
+                     : "<li>โอนเงินตามบัญชีของร้าน แล้วกด <b>แจ้งโอนเงิน</b> แอดมินตรวจแล้วยอดเข้ากระเป๋า</li>") + "</ul>"},
+  {i: "🛒", t: "2. สั่งของ", b: () => "<ul><li>แท็บ <b>สั่งของ</b> → เลือกสินค้า</li><li>จำนวนเป็น <b>ทวีคูณของ 500</b> (500, 1,000, 1,500 …)</li>" +
+     "<li>ใส่ <b>แท็กฟาร์มของคุณ</b> เช่น #P2Y8QLG (ในเกม: ปุ่มเพื่อน → สมุดเพื่อน จะเห็นแท็กของคุณ) — ใส่ผิดจะส่งของไม่ได้</li><li>กดสั่งซื้อ ระบบหักเงินจากกระเป๋าทันที</li></ul>"},
+  {i: "🕒", t: "3. รอคิว", b: () => "<ul><li>แท็บ <b>ออเดอร์ของฉัน</b> บอกว่าคุณอยู่ <b>คิวที่เท่าไร</b> และสถานะล่าสุด</li>" +
+     "<li>ถึงคิวแล้ว ด้านบนของเว็บจะขึ้นแถบสีส้ม 👉 ให้เข้าเกม</li><li>เปิดเว็บค้างไว้ได้ หน้าเว็บอัปเดตเอง</li></ul>"},
+  {i: "🤝", t: "4. กดรับเพื่อน", b: () => "<ul><li>ฟาร์มของร้านจะส่ง <b>คำขอเป็นเพื่อน</b> ไปที่แท็กของคุณ — เปิดเกม → สมุดเพื่อน → คำขอ → กด <b>รับ</b></li>" +
+     "<li>⚠️ ต้องรับภายใน <b>5 นาที</b> ไม่งั้นจะถูกย้ายไปท้ายคิว</li><li>⚠️ ไม่รับเพื่อนเลยจนครบ <b>4 ชั่วโมง</b> ออเดอร์จะถูกยกเลิก <b>ไม่คืนเงิน</b></li>" +
+     "<li>ออเดอร์ใหญ่อาจส่งจากหลายฟาร์ม ให้รับเพื่อนทุกฟาร์มที่ขึ้นในเว็บ</li></ul>"},
+  {i: "🧺", t: "5. ซื้อของที่ร้านริมทาง", b: () => "<ul><li>เข้าฟาร์มของร้านที่เป็นเพื่อน → แตะ <b>ร้านริมทาง</b> → ซื้อ <b>ทุกถาด</b> ที่วางไว้</li>" +
+     "<li>ซื้อไปเรื่อย ๆ ร้านจะวางถาดใหม่ให้จนครบจำนวน</li><li>ถ้าไม่ซื้อเกิน 5 นาที ระบบจะพักออเดอร์ไว้</li><li>ส่งครบแล้ว ร้านจะลบเพื่อนออกเอง</li></ul>"},
+  {i: "✅", t: "พร้อมแล้ว!", b: () => "<p>กดปุ่ม <b>📖 วิธีใช้</b> ด้านบนเพื่อเปิดคำแนะนำนี้ได้ทุกเมื่อ</p>" +
+     (SHOP.contact ? '<p class="muted">ติดต่อร้าน:</p><pre class="pay">' + esc(SHOP.contact) + "</pre>" : "")}
+];
+let gStep = 0;
+function openGuide(n){ gStep = n || 0; drawGuide(); show("guideBg", true); }
+function closeGuide(){ show("guideBg", false); store("hd_guided", "1"); }
+function stepGuide(d){
+  if (d > 0 && gStep === GUIDE.length - 1) {
+    closeGuide();
+    if (ME && !(ME.balance > 0)) go("wallet");
+    return;
+  }
+  gStep = Math.max(0, Math.min(GUIDE.length - 1, gStep + d)); drawGuide();
+}
+function drawGuide(){
+  const g = GUIDE[gStep];
+  $("gBody").innerHTML = '<div class="gi">' + g.i + '</div><h3 id="gTitle">' + g.t + "</h3>" + g.b();
+  $("gDots").innerHTML = GUIDE.map((_, i) => '<i class="' + (i === gStep ? "on" : "") + '"></i>').join("");
+  $("gBack").style.visibility = gStep ? "visible" : "hidden";
+  $("gNext").textContent = gStep === GUIDE.length - 1 ? (ME && !(ME.balance > 0) ? "ไปเติมเงินเลย" : "เริ่มใช้งาน") : "ถัดไป";
+}
+
+/* ---------- บัญชี ---------- */
+async function rmTag(tag){
+  if (!confirm("ลบแท็ก " + tag + " ออกจากบัญชี?")) return;
+  try { ME = (await api("shop_remove_tag", {tag: tag})).user; paintMe(); } catch (e) { note("tagMsg", e.message, "err"); }
+}
+boot();
+</script>
+</body>
+</html>
