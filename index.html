@@ -178,7 +178,6 @@ td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;vertic
         <h2>เติมเงินด้วย QR พร้อมเพย์</h2>
         <label for="qrAmt">จำนวนเงินที่จะเติม (บาท)</label>
         <input id="qrAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="เช่น 300">
-        <div class="qbtns" id="qrQuick"></div>
         <button onclick="makeQR()" style="width:100%;margin-top:8px">สร้าง QR</button>
         <div id="qrBox" class="hide" style="text-align:center;margin-top:14px">
           <div id="qrImg" style="display:inline-block;background:#fff;padding:12px;border-radius:12px"></div>
@@ -191,19 +190,7 @@ td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left;vertic
         <button id="bSlip" onclick="sendSlip()" style="width:100%;margin-top:6px">ส่งสลิป</button>
         <p class="muted" id="slipNote">ระบบตรวจสลิปให้อัตโนมัติ ผ่านแล้วยอดเข้ากระเป๋าทันที (1 สลิปใช้ได้ครั้งเดียว)</p>
       </div>
-      <div class="card">
-        <details id="manualBox">
-          <summary style="cursor:pointer"><b>โอนแบบอื่น / ไม่มีสลิป</b></summary>
-          <div id="payInfoBox"></div>
-          <label for="tuAmt">จำนวนเงินที่โอน (บาท)</label>
-          <input id="tuAmt" type="number" inputmode="decimal" min="1" step="1">
-          <label for="tuInfo">ข้อมูลการโอน (เวลาที่โอน / 4 ตัวท้ายบัญชีต้นทาง)</label>
-          <input id="tuInfo" maxlength="120" placeholder="เช่น โอนเวลา 14:32 จากบัญชีลงท้าย 1234">
-          <div id="tuMsg"></div>
-          <button onclick="doTopup()" style="width:100%;margin-top:6px">แจ้งโอนเงิน</button>
-          <p class="muted">โอนเงินตามข้อมูลด้านบนก่อน แล้วค่อยกดแจ้ง แอดมินตรวจแล้วยอดจะเข้ากระเป๋า</p>
-        </details>
-      </div>
+      <div class="card hide" id="noPP"><div class="msg info">ร้านยังไม่ได้ตั้งพร้อมเพย์ ติดต่อแอดมินเพื่อเติมเงิน</div></div>
       <div class="card"><h2>คำขอเติมเงิน</h2><div id="topupList"></div></div>
       <div class="card"><h2>ประวัติเงินเข้า-ออก</h2><div id="ledgerList"></div></div>
     </section>
@@ -630,13 +617,9 @@ async function sendSlip(){
 /* ---------- กระเป๋าเงิน ---------- */
 async function loadWallet(){
   show("qrCard", !!SHOP.promptpay);
-  if (!SHOP.promptpay) $("manualBox").open = true;
+  show("noPP", !SHOP.promptpay);
   $("slipNote").textContent = SHOP.autoSlip ? "ระบบตรวจสลิปให้อัตโนมัติ ผ่านแล้วยอดเข้ากระเป๋าทันที (1 สลิปใช้ได้ครั้งเดียว)"
                                             : "ส่งสลิปแล้วแอดมินจะตรวจและเติมยอดให้";
-  if (!$("qrQuick").innerHTML) $("qrQuick").innerHTML = [100, 300, 500, 1000].map(n =>
-    '<button class="ghost small" onclick="$(\'qrAmt\').value=' + n + '">' + n + "</button>").join("");
-  $("payInfoBox").innerHTML = SHOP.payInfo ? '<div class="muted">โอนเงินมาที่</div><pre class="pay">' + esc(SHOP.payInfo) + "</pre>"
-                                           : '<div class="msg info">ร้านยังไม่ได้ใส่ข้อมูลบัญชีรับเงิน ติดต่อแอดมิน</div>';
   try {
     const d = await api("shop_ledger");
     const tp = {pending: ["รอตรวจ", "warn"], approved: ["อนุมัติแล้ว", "ok"], rejected: ["ไม่อนุมัติ", "bad"]};
@@ -650,15 +633,6 @@ async function loadWallet(){
       "<div class='muted'>คงเหลือ " + fmt(l.balance) + "</div></td></tr>").join("") + "</table>" : '<div class="muted">ยังไม่มี</div>';
   } catch (e) { $("ledgerList").innerHTML = '<div class="msg err">' + esc(e.message) + "</div>"; }
 }
-async function doTopup(){
-  note("tuMsg", "");
-  try {
-    const d = await api("shop_topup", {amount: $("tuAmt").value, info: $("tuInfo").value});
-    note("tuMsg", "แจ้งโอนแล้ว (" + d.id + ") รอแอดมินตรวจสอบ", "good");
-    $("tuAmt").value = ""; $("tuInfo").value = ""; loadWallet();
-  } catch (e) { note("tuMsg", e.message, "err"); }
-}
-
 /* ---------- คำแนะนำการใช้งาน ---------- */
 const GUIDE = [
   {i: "👋", t: "ยินดีต้อนรับ", b: () => "<p>สั่งของ Hay Day ที่นี่ได้ตลอด ระบบส่งของให้อัตโนมัติผ่าน <b>ร้านริมทาง</b> ในเกม</p>" +
@@ -666,7 +640,7 @@ const GUIDE = [
   {i: "💰", t: "1. เติมเงิน", b: () => "<ul><li>ไปแท็บ <b>กระเป๋าเงิน</b> (หรือปุ่ม <b>+ เติมเงิน</b>)</li>" +
      (SHOP.promptpay ? "<li>ใส่ยอด → กด <b>สร้าง QR</b> → สแกนจ่ายในแอปธนาคาร</li><li>แนบรูปสลิป → กด <b>ส่งสลิป</b>" +
        (SHOP.autoSlip ? " ระบบตรวจให้อัตโนมัติ ยอดเข้าทันที" : " แอดมินตรวจแล้วยอดเข้า") + "</li><li>ใส่ยอดให้ตรงกับที่โอนจริง · สลิป 1 ใบใช้ได้ครั้งเดียว</li>"
-                     : "<li>โอนเงินตามบัญชีของร้าน แล้วกด <b>แจ้งโอนเงิน</b> แอดมินตรวจแล้วยอดเข้ากระเป๋า</li>") + "</ul>"},
+                     : "<li>ร้านยังไม่เปิดเติมเงินผ่าน QR ติดต่อแอดมิน</li>") + "</ul>"},
   {i: "🛒", t: "2. สั่งของ", b: () => "<ul><li>แท็บ <b>สั่งของ</b> → เลือกสินค้า</li><li>จำนวนเป็น <b>ทวีคูณของ 500</b> (500, 1,000, 1,500 …)</li>" +
      "<li>ใส่ <b>แท็กฟาร์มของคุณ</b> เช่น #P2Y8QLG (ในเกม: ปุ่มเพื่อน → สมุดเพื่อน จะเห็นแท็กของคุณ) — ใส่ผิดจะส่งของไม่ได้</li><li>กดสั่งซื้อ ระบบหักเงินจากกระเป๋าทันที</li></ul>"},
   {i: "🕒", t: "3. รอคิว", b: () => "<ul><li>แท็บ <b>ออเดอร์ของฉัน</b> บอกว่าคุณอยู่ <b>คิวที่เท่าไร</b> และสถานะล่าสุด</li>" +
