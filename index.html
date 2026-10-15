@@ -254,6 +254,19 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 .guide .gbtns{display:flex;gap:8px}
 .guide .gbtns button{flex:1}
 
+
+/* ----- แจ้งเตือนถึงคิว ----- */
+.alertcard{display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:var(--r-lg);margin-bottom:var(--s4);background:var(--pink);color:var(--pink-ink);border:1px solid color-mix(in srgb,var(--pink-ink) 20%,transparent)}
+.alertcard .ic{width:28px;height:28px;flex:0 0 auto}
+.alertcard div{flex:1;font-size:.9rem;line-height:1.45}
+.alertcard b{display:block;font-family:var(--f-display);font-weight:500;font-size:.98rem}
+.alertcard button{flex:0 0 auto;min-height:40px;padding:6px 14px;font-size:.9rem;background:var(--pink-ink);color:#fff}
+.turn{text-align:center}
+.turn .bell{width:84px;height:84px;margin:4px auto 12px;border-radius:50%;background:var(--butter);color:var(--butter-ink);display:grid;place-items:center;animation:ring 1s ease-in-out 3}
+.turn .bell .ic{width:44px;height:44px}
+.turn h3{font-size:1.4rem;margin:0 0 8px}
+.turn p{margin:0 0 16px}
+@keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(5deg)}}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
@@ -280,6 +293,7 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
   <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
   <symbol id="i-hello" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></symbol>
 </svg>
 <div class="wrap">
@@ -355,6 +369,7 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
       <button class="fit" onclick="go('wallet')">เติมเงิน</button>
     </div>
     <div id="activeBanner" aria-live="polite"></div>
+    <div id="alertBox"></div>
     <nav class="tabs" aria-label="เมนู">
       <button id="tab_order" class="on" onclick="go('order')"><svg class="ic"><use href="#i-cart"/></svg>สั่งของ</button>
       <button id="tab_orders" onclick="go('orders')"><svg class="ic"><use href="#i-box"/></svg>ออเดอร์</button>
@@ -443,6 +458,14 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
   </div>
 </div>
 
+<div id="turnBg" class="guide-bg hide" onclick="if(event.target===this)closeTurn()">
+  <div class="guide turn" role="alertdialog" aria-modal="true" aria-labelledby="turnTitle" aria-describedby="turnBody">
+    <div class="bell" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></div>
+    <h3 id="turnTitle">ถึงคิวคุณแล้ว</h3>
+    <p id="turnBody"></p>
+    <button class="block" onclick="closeTurn()">รับทราบ</button>
+  </div>
+</div>
 <div id="guideBg" class="guide-bg hide" onclick="if(event.target===this)closeGuide()">
   <div class="guide" role="dialog" aria-modal="true" aria-labelledby="gTitle">
     <button class="x" onclick="closeGuide()" aria-label="ปิด"><svg class="ic"><use href="#i-x"/></svg></button>
@@ -548,7 +571,7 @@ function paintPromo(){
     : "";
 }
 function sessionEnd(){
-  TOKEN = ""; ME = null; store("hd_token", null);
+  TOKEN = ""; ME = null; store("hd_token", null); wakeOff(); stopFlash();
   if (TIMER) { clearInterval(TIMER); TIMER = null; }
   show("vMain", false); show("topRight", false); show("vAuth", true);
 }
@@ -598,11 +621,101 @@ function go(p){
   if (p === "order") loadCatalog();
 }
 async function tick(){
-  if (document.hidden) return;
-  try {
-    ME = (await api("shop_me")).user; paintMe();
-    await loadOrders(curPage !== "orders");
+  try {                                         // หน้าอยู่เบื้องหลังก็ยังเช็กคิว (เพื่อแจ้งเตือนถึงคิว)
+    if (!document.hidden) { ME = (await api("shop_me")).user; paintMe(); }
+    await loadOrders(curPage !== "orders" || document.hidden);
   } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN) { stopFlash(); tick(); wakeOn(); } });
+
+/* ---------- แจ้งเตือนถึงคิว (เสียง / สั่น / แจ้งเตือนเครื่อง / หน้าต่างเด้ง) ---------- */
+let AUDIO = null, SWREG = null, WAKE = null, FLASH = null, TITLE0 = document.title, HAS_ACTIVE = false;
+const SEEN = new Set((() => { try { return JSON.parse(sessionStorage.getItem("hd_seen") || "[]"); } catch (e) { return []; } })());
+function saveSeen(){ try { sessionStorage.setItem("hd_seen", JSON.stringify([...SEEN].slice(-60))); } catch (e) {} }
+if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").then(r => { SWREG = r; }).catch(() => {}); }
+function alertsOn(){ return load("hd_alert") === "1"; }
+function unlockAudio(){
+  try {
+    if (!AUDIO) AUDIO = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUDIO.state === "suspended") AUDIO.resume();
+  } catch (e) {}
+}
+document.addEventListener("pointerdown", () => { if (alertsOn()) unlockAudio(); }, {passive: true});
+function chime(){
+  try {
+    unlockAudio(); if (!AUDIO) return;
+    const t0 = AUDIO.currentTime;
+    [[880, 0], [1175, .18], [1568, .36], [880, .9], [1175, 1.08], [1568, 1.26]].forEach(([f, d]) => {
+      const o = AUDIO.createOscillator(), g = AUDIO.createGain();
+      o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(AUDIO.destination);
+      g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.35, t0 + d + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + .45);
+      o.start(t0 + d); o.stop(t0 + d + .5);
+    });
+  } catch (e) {}
+}
+function sysNotify(title, body){
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const opt = {body: body, tag: "hd-turn", renotify: true, requireInteraction: true, vibrate: [300, 150, 300, 150, 600], icon: "img/Cream.webp"};
+  if (SWREG && SWREG.showNotification) { SWREG.showNotification(title, opt).catch(() => {}); return; }
+  try { new Notification(title, opt); } catch (e) {}
+}
+function flashTitle(t){
+  stopFlash(); TITLE0 = document.title;
+  let on = false;
+  FLASH = setInterval(() => { document.title = (on = !on) ? "🔔 " + t : TITLE0; }, 900);
+}
+function stopFlash(){ if (FLASH) { clearInterval(FLASH); FLASH = null; document.title = TITLE0; } }
+function showTurn(title, body){
+  $("turnTitle").textContent = title; $("turnBody").textContent = body; show("turnBg", true);
+}
+function closeTurn(){ show("turnBg", false); stopFlash(); }
+function ringTurn(title, body, loud){
+  if (loud) { chime(); try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 600]); } catch (e) {} }
+  sysNotify(title, body);
+  if (document.hidden) flashTitle(title);
+  if (loud) showTurn(title, body);
+}
+async function enableAlerts(){
+  store("hd_alert", "1"); unlockAudio(); chime();
+  if ("Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch (e) {} }
+  wakeOn(); paintAlertCard();
+}
+async function wakeOn(){                        // ไม่ให้จอดับระหว่างมีออเดอร์ค้าง (เบราว์เซอร์มือถือจะหยุดหน้าเว็บตอนจอดับ)
+  if (!alertsOn() || !HAS_ACTIVE || document.hidden || WAKE || !("wakeLock" in navigator)) return;
+  try { WAKE = await navigator.wakeLock.request("screen"); WAKE.addEventListener("release", () => { WAKE = null; }); } catch (e) {}
+}
+function wakeOff(){ if (WAKE) { try { WAKE.release(); } catch (e) {} WAKE = null; } }
+function paintAlertCard(){
+  const box = $("alertBox"); if (!box) return;
+  const perm = "Notification" in window ? Notification.permission : "unsupported";
+  if (!HAS_ACTIVE || (alertsOn() && perm !== "default")) { box.innerHTML = ""; return; }
+  box.innerHTML = '<div class="alertcard"><svg class="ic"><use href="#i-bell"/></svg><div><b>เปิดเสียงเตือนเมื่อถึงคิว</b>' +
+    "เว็บจะส่งเสียง สั่น และขึ้นแจ้งเตือนเมื่อบอทแอดเพื่อนหาคุณ · เปิดหน้านี้ค้างไว้ระหว่างรอคิว</div>" +
+    '<button onclick="enableAlerts()">เปิดเตือน</button></div>';
+}
+function checkTurn(list){
+  const LIVE = ["queued", "working", "wait_accept", "listing"];
+  HAS_ACTIVE = list.some(o => LIVE.indexOf(o.status) >= 0);
+  if (HAS_ACTIVE) wakeOn(); else wakeOff();
+  paintAlertCard();
+  const pick = st => list.find(o => o.status === st && !SEEN.has(o.id + "|" + st));
+  let o;
+  if ((o = pick("wait_accept"))) {
+    ring(list, o, "ถึงคิวคุณแล้ว! กดรับเพื่อนในเกม", "เปิด Hay Day → สมุดเพื่อน → คำขอ → กด 'รับ' ภายใน 5 นาที (แท็ก " + o.tag + ")", true);
+  } else if ((o = pick("working"))) {
+    ring(list, o, "ถึงคิวคุณแล้ว! เปิดเกมรอไว้เลย", "บอทกำลังแอดเพื่อนหาแท็ก " + o.tag + " — เปิด Hay Day แล้วรอกดรับคำขอเป็นเพื่อน", true);
+  } else if ((o = pick("listing"))) {
+    ring(list, o, "ของวางขายแล้ว เข้าไปซื้อได้เลย", "เข้าฟาร์มของร้านที่เป็นเพื่อน → ร้านริมทาง → ซื้อทุกถาด", true);
+  } else if ((o = list.find(x => x.status === "queued" && x.queuePos === 1 && !SEEN.has(x.id + "|next")))) {
+    SEEN.add(o.id + "|next"); saveSeen();
+    sysNotify("คุณเป็นคิวถัดไป", "เตรียมเปิด Hay Day ไว้ อีกไม่นานบอทจะแอดเพื่อนหาแท็ก " + o.tag);
+  }
+}
+function ring(list, o, title, body, loud){
+  // ลูกค้าเดียวหลายออเดอร์ (แท็กเดียวกันเปลี่ยนสถานะพร้อมกัน) → เตือนครั้งเดียว
+  list.forEach(x => { if (x.status === o.status && tagKey(x.tag) === tagKey(o.tag)) SEEN.add(x.id + "|" + x.status); });
+  saveSeen();
+  ringTurn(title, body, loud);
 }
 
 /* ---------- รูปสินค้า (โฟลเดอร์ img/) ---------- */
@@ -775,6 +888,7 @@ async function loadOrders(silent){
   let list;
   if (!silent && !$("ordersBox").innerHTML) $("ordersBox").innerHTML = '<div class="skel line"></div>'.repeat(3);
   try { list = (await api("shop_orders")).orders; } catch (e) { if (!silent) $("ordersBox").innerHTML = '<div class="msg err">โหลดออเดอร์ไม่ได้: ' + esc(e.message) + '</div><button class="ghost small" onclick="loadOrders()">ลองโหลดใหม่</button>'; return; }
+  checkTurn(list);
   const act = list.filter(o => o.status === "wait_accept" || o.status === "working");
   const qd = list.filter(o => o.status === "queued" && o.queuePos != null).sort((a, b) => a.queuePos - b.queuePos)[0];
   $("activeBanner").innerHTML = act.length
