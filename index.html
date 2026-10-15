@@ -534,7 +534,7 @@ async function boot(){
     const d = await api("shop_info");
     SHOP.payInfo = d.payInfo || "";
     SHOP.promptpay = d.promptpay || ""; SHOP.autoSlip = !!d.autoSlip; SHOP.contact = d.contact || "";
-    SHOP.signupBonus = d.signupBonus || null; SHOP.fb = !!d.fbEnabled;
+    SHOP.signupBonus = d.signupBonus || null; SHOP.fb = !!d.fbEnabled; SHOP.fbRaw = d.fbEnabled;
     paintPromo();
     if (d.shopName) { $("shopName").textContent = d.shopName; document.title = d.shopName; }
   } catch (e) { show("vAuth", true); note("authMsg", e.message, "err"); return; }
@@ -637,7 +637,7 @@ function go(p){
   if (p === "orders") loadOrders();
   if (p === "wallet") loadWallet();
   if (p === "order") loadCatalog();
-  if (p === "acct") fbRefresh(true);
+  if (p === "acct") { fbRefresh(true); paintFb(); }
 }
 async function tick(){
   try {                                         // หน้าอยู่เบื้องหลังก็ยังเช็กคิว (เพื่อแจ้งเตือนถึงคิว)
@@ -731,6 +731,15 @@ async function fbRefresh(force){
   paintFb(); paintAlertCard(); fbPrefetch();
 }
 function paintFb(){
+  if (!SHOP.fb && /[?&]debug=1/.test(location.search)) {   // เปิดหน้าร้านด้วย ?debug=1 → บอกสาเหตุที่ปุ่ม Messenger ไม่ขึ้น (เฉพาะแอดมินเช็ก)
+    show("fbCard", true);
+    $("fbState").className = "msg err";
+    $("fbState").textContent = SHOP.fbRaw === undefined
+      ? "เช็กระบบ: Apps Script ที่หน้าร้านเรียกยังเป็นเวอร์ชันก่อนมีระบบ Messenger — วาง Shop.gs ใหม่ แล้ว Deploy → Manage deployments → ✏️ → New version"
+      : "เช็กระบบ: Apps Script เวอร์ชันใหม่แล้ว แต่ยังไม่มี FB_PAGE หรือ FB_PAGE_TOKEN ใน Script properties (ชื่อต้องตรงเป๊ะ)";
+    $("bFbWrap").innerHTML = ""; show("bFbOff", false);
+    return;
+  }
   show("fbCard", !!SHOP.fb);
   if (!SHOP.fb || !FB) return;
   $("fbState").className = "msg " + (FB.linked ? (FB.windowOk ? "good" : "info") : "info");
