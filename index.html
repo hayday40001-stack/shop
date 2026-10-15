@@ -794,6 +794,7 @@ async function loadCatalog(){
       ? CATALOG.map(i => '<option value="' + esc(i.item) + '">' + esc(i.item) + "</option>").join("")
       : '<option value="">ตอนนี้ยังไม่มีสินค้าที่สั่งได้</option>';
     if (keep && CATALOG.some(i => i.item === keep)) sel.value = keep;
+    else sel.selectedIndex = -1;                 // ยังไม่ได้เลือก → ให้ลูกค้าแตะเลือกเอง (ไม่เลือกตัวแรกให้อัตโนมัติ)
     drawGrid(); calc();
   } catch (e) {
     if (!CATALOG.length) $("itemGrid").innerHTML = '<div style="grid-column:1/-1"><div class="msg err">โหลดรายการสินค้าไม่ได้: ' + esc(e.message) +
@@ -894,7 +895,12 @@ async function doOrder(){
                                : "สั่งสำเร็จ เลขที่ " + ids + (d.orders && d.orders.length > 1
                                    ? " — ส่งตามลำดับ: " + d.orders.map((o, i) => (i + 1) + ". " + o.tag + (o.qty ? " (" + fmt(o.qty) + ")" : "")).join(" → ")
                                    : "") + " — ดูคิวที่ 'ออเดอร์ของฉัน'", d.partial ? "err" : "good");
-    if (!d.partial) { PER = {}; ROWS_SIG = ""; }
+    if (!d.partial) {                          // สั่งสำเร็จ → ล้างที่เลือกไว้ด้านบนทันที กันลูกค้าสับสน/กดสั่งซ้ำ
+      PER = {}; ROWS_SIG = "";
+      $("selItem").value = ""; $("qty").value = 500; $("oTag").value = ""; $("selTag").value = "";
+      try { $("itemSearch").value = ""; } catch (e) {}
+      drawGrid();
+    }
     loadCatalog();
   } catch (e) { note("orderMsg", e.message, "err"); }
   $("bOrder").classList.remove("busy"); $("bOrder").removeAttribute("aria-busy");
