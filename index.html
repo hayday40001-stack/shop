@@ -294,6 +294,7 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
   <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M12 3C6.5 3 2.5 6.9 2.5 11.7c0 2.6 1.2 4.9 3.1 6.5V21l2.9-1.6c1.1.3 2.3.5 3.5.5 5.5 0 9.5-3.9 9.5-8.7S17.5 3 12 3z"/><path d="M7 13l3-3 2.5 2.5L17 9"/></symbol>
   <symbol id="i-hello" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></symbol>
 </svg>
 <div class="wrap">
@@ -451,6 +452,12 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 
     <section id="p_acct" class="hide">
       <div class="card">
+        <div id="fbCard" class="hide" style="margin-bottom:20px">
+          <h2>แจ้งเตือนทาง Messenger</h2>
+          <p class="muted" style="margin-top:-6px">ถึงคิวแล้วเพจร้านจะส่งข้อความหาคุณ แม้ปิดเว็บไปแล้ว</p>
+          <div id="fbState" class="msg info">กำลังเช็ก…</div>
+          <div class="row"><button id="bFb" onclick="fbLink()">ผูก Messenger</button><button class="ghost hide" id="bFbOff" onclick="fbUnlink()">ยกเลิกการผูก</button></div>
+        </div>
         <h2>ทดสอบเสียงเตือนถึงคิว</h2>
         <p class="muted" style="margin-top:-6px">ลองดูว่าเครื่องนี้ได้ยินเสียง สั่น และขึ้นแจ้งเตือนไหม (ไม่มีผลกับออเดอร์จริง)</p>
         <div class="row">
@@ -525,7 +532,7 @@ async function boot(){
     const d = await api("shop_info");
     SHOP.payInfo = d.payInfo || "";
     SHOP.promptpay = d.promptpay || ""; SHOP.autoSlip = !!d.autoSlip; SHOP.contact = d.contact || "";
-    SHOP.signupBonus = d.signupBonus || null;
+    SHOP.signupBonus = d.signupBonus || null; SHOP.fb = !!d.fbEnabled;
     paintPromo();
     if (d.shopName) { $("shopName").textContent = d.shopName; document.title = d.shopName; }
   } catch (e) { show("vAuth", true); note("authMsg", e.message, "err"); return; }
@@ -580,7 +587,7 @@ function paintPromo(){
     : "";
 }
 function sessionEnd(){
-  TOKEN = ""; ME = null; store("hd_token", null); wakeOff(); stopFlash();
+  TOKEN = ""; ME = null; FB = null; store("hd_token", null); wakeOff(); stopFlash();
   if (TIMER) { clearInterval(TIMER); TIMER = null; }
   show("vMain", false); show("topRight", false); show("vAuth", true);
 }
@@ -628,6 +635,7 @@ function go(p){
   if (p === "orders") loadOrders();
   if (p === "wallet") loadWallet();
   if (p === "order") loadCatalog();
+  if (p === "acct") fbRefresh(true);
 }
 async function tick(){
   try {                                         // หน้าอยู่เบื้องหลังก็ยังเช็กคิว (เพื่อแจ้งเตือนถึงคิว)
@@ -697,10 +705,50 @@ function wakeOff(){ if (WAKE) { try { WAKE.release(); } catch (e) {} WAKE = null
 function paintAlertCard(){
   const box = $("alertBox"); if (!box) return;
   const perm = "Notification" in window ? Notification.permission : "unsupported";
-  if (!HAS_ACTIVE || (alertsOn() && perm !== "default")) { box.innerHTML = ""; return; }
-  box.innerHTML = '<div class="alertcard"><svg class="ic"><use href="#i-bell"/></svg><div><b>เปิดเสียงเตือนเมื่อถึงคิว</b>' +
-    "เว็บจะส่งเสียง สั่น และขึ้นแจ้งเตือนเมื่อบอทแอดเพื่อนหาคุณ · เปิดหน้านี้ค้างไว้ระหว่างรอคิว</div>" +
-    '<button onclick="enableAlerts()">เปิดเตือน</button></div>';
+  let h = "";
+  if (HAS_ACTIVE && SHOP.fb && FB && !(FB.linked && FB.windowOk)) {
+    h += '<div class="alertcard"><svg class="ic"><use href="#i-chat"/></svg><div><b>' +
+      (FB.linked ? "เปิดแจ้งเตือน Messenger รอบนี้" : "รับแจ้งเตือนทาง Messenger") + "</b>" +
+      (FB.linked ? "แตะแล้วกดปุ่ม 'รับแจ้งเตือน' ในแชต — เพจจะทักเมื่อถึงคิว (ใช้ได้ 24 ชม.)"
+                 : "ถึงคิวแล้วเพจร้านจะส่งข้อความหา แม้ปิดเว็บไปแล้ว") + "</div>" +
+      '<button onclick="fbLink()">' + (FB.linked ? "เปิด" : "ผูก") + "</button></div>";
+  }
+  if (HAS_ACTIVE && !(alertsOn() && perm !== "default")) {
+    h += '<div class="alertcard"><svg class="ic"><use href="#i-bell"/></svg><div><b>เปิดเสียงเตือนเมื่อถึงคิว</b>' +
+      "เว็บจะส่งเสียง สั่น และขึ้นแจ้งเตือนเมื่อบอทแอดเพื่อนหาคุณ · เปิดหน้านี้ค้างไว้ระหว่างรอคิว</div>" +
+      '<button onclick="enableAlerts()">เปิดเตือน</button></div>';
+  }
+  box.innerHTML = h;
+}
+/* ---------- Messenger ---------- */
+let FB = null, FB_AT = 0;
+async function fbRefresh(force){
+  if (!SHOP.fb || !TOKEN) return;
+  if (!force && FB && Date.now() - FB_AT < 60000) return;
+  try { FB = await api("shop_fb_status"); FB_AT = Date.now(); } catch (e) { return; }
+  paintFb(); paintAlertCard();
+}
+function paintFb(){
+  show("fbCard", !!SHOP.fb);
+  if (!SHOP.fb || !FB) return;
+  $("fbState").className = "msg " + (FB.linked ? (FB.windowOk ? "good" : "info") : "info");
+  $("fbState").textContent = !FB.linked ? "ยังไม่ได้ผูก — กด 'ผูก Messenger' แล้วกดเริ่มแชตกับเพจ"
+    : FB.windowOk ? "ผูกแล้ว ✓ เปิดรับแจ้งเตือนอยู่ (ภายใน 24 ชม. หลังทักเพจล่าสุด)"
+    : "ผูกแล้ว แต่ช่วงรับแจ้งเตือนหมดแล้ว — กด 'เปิดแจ้งเตือนรอบนี้' แล้วแตะปุ่มในแชต";
+  $("bFb").textContent = FB.linked ? "เปิดแจ้งเตือนรอบนี้" : "ผูก Messenger";
+  show("bFbOff", !!FB.linked);
+}
+async function fbLink(){
+  const w = window.open("", "_blank");             // เปิดหน้าต่างก่อน (กันเบราว์เซอร์บล็อกป๊อปอัป)
+  try {
+    const d = await api("shop_fb_link");
+    if (w) w.location.href = d.url; else location.href = d.url;
+    setTimeout(() => fbRefresh(true), 15000);
+  } catch (e) { if (w) w.close(); alert(e.message); }
+}
+async function fbUnlink(){
+  if (!confirm("ยกเลิกการผูก Messenger? จะไม่ได้รับแจ้งเตือนทางแชตอีก")) return;
+  try { await api("shop_fb_unlink"); fbRefresh(true); } catch (e) { alert(e.message); }
 }
 async function testAlert(sec){
   if (!alertsOn() || ("Notification" in window && Notification.permission === "default")) await enableAlerts();
@@ -725,7 +773,7 @@ function checkTurn(list){
     ring(list, o, "ถึงคิวคุณแล้ว! เปิดเกมรอไว้เลย", "บอทกำลังแอดเพื่อนหาแท็ก " + o.tag + " — เปิด Hay Day แล้วรอกดรับคำขอเป็นเพื่อน", true);
   } else if ((o = pick("listing"))) {
     ring(list, o, "ของวางขายแล้ว เข้าไปซื้อได้เลย", "เข้าฟาร์มของร้านที่เป็นเพื่อน → ร้านริมทาง → ซื้อทุกถาด", true);
-  } else if ((o = list.find(x => x.status === "queued" && x.queuePos === 1 && !SEEN.has(x.id + "|next")))) {
+  } else if ((o = list.find(x => x.status === "queued" && (x.queueNext || x.queuePos === 1) && !SEEN.has(x.id + "|next")))) {
     SEEN.add(o.id + "|next"); saveSeen();
     sysNotify("คุณเป็นคิวถัดไป", "เตรียมเปิด Hay Day ไว้ อีกไม่นานบอทจะแอดเพื่อนหาแท็ก " + o.tag);
   }
@@ -914,6 +962,7 @@ async function loadOrders(silent){
   if (!silent && !$("ordersBox").innerHTML) $("ordersBox").innerHTML = '<div class="skel line"></div>'.repeat(3);
   try { list = (await api("shop_orders")).orders; } catch (e) { if (!silent) $("ordersBox").innerHTML = '<div class="msg err">โหลดออเดอร์ไม่ได้: ' + esc(e.message) + '</div><button class="ghost small" onclick="loadOrders()">ลองโหลดใหม่</button>'; return; }
   checkTurn(list);
+  if (HAS_ACTIVE) fbRefresh();
   const act = list.filter(o => o.status === "wait_accept" || o.status === "working");
   const qd = list.filter(o => o.status === "queued" && o.queuePos != null).sort((a, b) => a.queuePos - b.queuePos)[0];
   $("activeBanner").innerHTML = act.length
