@@ -260,6 +260,8 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 .alertcard .ic{width:28px;height:28px;flex:0 0 auto}
 .alertcard div{flex:1;font-size:.9rem;line-height:1.45}
 .alertcard b{display:block;font-family:var(--f-display);font-weight:500;font-size:.98rem}
+.alertcard a.btn{flex:0 0 auto;display:inline-flex;align-items:center;min-height:40px;padding:6px 14px;font-size:.9rem;border-radius:var(--r-md);background:var(--pink-ink);color:#fff;text-decoration:none;font-family:var(--f-display);font-weight:500}
+a.btn.main{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:11px 18px;border-radius:var(--r-md);background:var(--brand);color:var(--brand-ink);text-decoration:none;font-family:var(--f-display);font-weight:500}
 .alertcard button{flex:0 0 auto;min-height:40px;padding:6px 14px;font-size:.9rem;background:var(--pink-ink);color:#fff}
 .turn{text-align:center}
 .turn .bell{width:84px;height:84px;margin:4px auto 12px;border-radius:50%;background:var(--butter);color:var(--butter-ink);display:grid;place-items:center;animation:ring 1s ease-in-out 3}
@@ -456,7 +458,7 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
           <h2>แจ้งเตือนทาง Messenger</h2>
           <p class="muted" style="margin-top:-6px">ถึงคิวแล้วเพจร้านจะส่งข้อความหาคุณ แม้ปิดเว็บไปแล้ว</p>
           <div id="fbState" class="msg info">กำลังเช็ก…</div>
-          <div class="row"><button id="bFb" onclick="fbLink()">ผูก Messenger</button><button class="ghost hide" id="bFbOff" onclick="fbUnlink()">ยกเลิกการผูก</button></div>
+          <div class="row"><span id="bFbWrap"><button id="bFb" onclick="fbLink()">ผูก Messenger</button></span><button class="ghost hide" id="bFbOff" onclick="fbUnlink()">ยกเลิกการผูก</button></div>
         </div>
         <h2>ทดสอบเสียงเตือนถึงคิว</h2>
         <p class="muted" style="margin-top:-6px">ลองดูว่าเครื่องนี้ได้ยินเสียง สั่น และขึ้นแจ้งเตือนไหม (ไม่มีผลกับออเดอร์จริง)</p>
@@ -587,7 +589,7 @@ function paintPromo(){
     : "";
 }
 function sessionEnd(){
-  TOKEN = ""; ME = null; FB = null; store("hd_token", null); wakeOff(); stopFlash();
+  TOKEN = ""; ME = null; FB = null; FB_URL = ""; store("hd_token", null); wakeOff(); stopFlash();
   if (TIMER) { clearInterval(TIMER); TIMER = null; }
   show("vMain", false); show("topRight", false); show("vAuth", true);
 }
@@ -711,7 +713,7 @@ function paintAlertCard(){
       (FB.linked ? "เปิดแจ้งเตือน Messenger รอบนี้" : "รับแจ้งเตือนทาง Messenger") + "</b>" +
       (FB.linked ? "แตะแล้วกดปุ่ม 'รับแจ้งเตือน' ในแชต — เพจจะทักเมื่อถึงคิว (ใช้ได้ 24 ชม.)"
                  : "ถึงคิวแล้วเพจร้านจะส่งข้อความหา แม้ปิดเว็บไปแล้ว") + "</div>" +
-      '<button onclick="fbLink()">' + (FB.linked ? "เปิด" : "ผูก") + "</button></div>";
+      '<a class="btn" ' + fbHref() + ">" + (FB.linked ? "เปิด" : "ผูก") + "</a></div>";
   }
   if (HAS_ACTIVE && !(alertsOn() && perm !== "default")) {
     h += '<div class="alertcard"><svg class="ic"><use href="#i-bell"/></svg><div><b>เปิดเสียงเตือนเมื่อถึงคิว</b>' +
@@ -726,7 +728,7 @@ async function fbRefresh(force){
   if (!SHOP.fb || !TOKEN) return;
   if (!force && FB && Date.now() - FB_AT < 60000) return;
   try { FB = await api("shop_fb_status"); FB_AT = Date.now(); } catch (e) { return; }
-  paintFb(); paintAlertCard();
+  paintFb(); paintAlertCard(); fbPrefetch();
 }
 function paintFb(){
   show("fbCard", !!SHOP.fb);
@@ -735,16 +737,27 @@ function paintFb(){
   $("fbState").textContent = !FB.linked ? "ยังไม่ได้ผูก — กด 'ผูก Messenger' แล้วกดเริ่มแชตกับเพจ"
     : FB.windowOk ? "ผูกแล้ว ✓ เปิดรับแจ้งเตือนอยู่ (ภายใน 24 ชม. หลังทักเพจล่าสุด)"
     : "ผูกแล้ว แต่ช่วงรับแจ้งเตือนหมดแล้ว — กด 'เปิดแจ้งเตือนรอบนี้' แล้วแตะปุ่มในแชต";
-  $("bFb").textContent = FB.linked ? "เปิดแจ้งเตือนรอบนี้" : "ผูก Messenger";
+  $("bFbWrap").innerHTML = '<a class="btn main" ' + fbHref() + ">" + (FB.linked ? "เปิดแจ้งเตือนรอบนี้" : "ผูก Messenger") + "</a>";
   show("bFbOff", !!FB.linked);
 }
-async function fbLink(){
-  const w = window.open("", "_blank");             // เปิดหน้าต่างก่อน (กันเบราว์เซอร์บล็อกป๊อปอัป)
+// ลิงก์ผูก Messenger ขอไว้ล่วงหน้า → ปุ่มเป็นลิงก์จริง แตะแล้วเปิด Messenger ทันที (ไม่โดนเบราว์เซอร์บล็อก)
+let FB_URL = "", FB_URL_AT = 0;
+function fbHref(){
+  return FB_URL && Date.now() - FB_URL_AT < 2 * 3600 * 1000
+    ? 'href="' + esc(FB_URL) + '" target="_blank" rel="noopener" onclick="setTimeout(() => fbRefresh(true), 15000)"'
+    : 'href="#" onclick="fbLink();return false"';
+}
+async function fbPrefetch(){
+  if (!SHOP.fb || !FB || (FB.linked && FB.windowOk)) return;
+  if (FB_URL && Date.now() - FB_URL_AT < 2 * 3600 * 1000) return;
+  try { const d = await api("shop_fb_link"); FB_URL = d.url; FB_URL_AT = Date.now(); paintFb(); paintAlertCard(); } catch (e) {}
+}
+async function fbLink(){                        // ยังไม่มีลิงก์ → ขอแล้วพาไป Messenger ในแท็บนี้เลย
   try {
     const d = await api("shop_fb_link");
-    if (w) w.location.href = d.url; else location.href = d.url;
-    setTimeout(() => fbRefresh(true), 15000);
-  } catch (e) { if (w) w.close(); alert(e.message); }
+    FB_URL = d.url; FB_URL_AT = Date.now();
+    location.href = d.url;
+  } catch (e) { alert(e.message); }
 }
 async function fbUnlink(){
   if (!confirm("ยกเลิกการผูก Messenger? จะไม่ได้รับแจ้งเตือนทางแชตอีก")) return;
