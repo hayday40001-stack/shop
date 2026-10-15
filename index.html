@@ -451,6 +451,15 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 
     <section id="p_acct" class="hide">
       <div class="card">
+        <h2>ทดสอบเสียงเตือนถึงคิว</h2>
+        <p class="muted" style="margin-top:-6px">ลองดูว่าเครื่องนี้ได้ยินเสียง สั่น และขึ้นแจ้งเตือนไหม (ไม่มีผลกับออเดอร์จริง)</p>
+        <div class="row">
+          <button class="ghost" onclick="testAlert(0)">ทดสอบทันที</button>
+          <button class="ghost" onclick="testAlert(10)">ทดสอบใน 10 วินาที</button>
+        </div>
+        <div id="testMsg" role="status"></div>
+      </div>
+      <div class="card">
         <h2>แท็กที่เคยใช้</h2><p class="muted" style="margin-top:-6px">ระบบจำแท็กจากการสั่งของไว้ให้เลือกครั้งต่อไป</p>
         <div id="tagList"></div><div id="tagMsg"></div>
       </div>
@@ -692,6 +701,16 @@ function paintAlertCard(){
   box.innerHTML = '<div class="alertcard"><svg class="ic"><use href="#i-bell"/></svg><div><b>เปิดเสียงเตือนเมื่อถึงคิว</b>' +
     "เว็บจะส่งเสียง สั่น และขึ้นแจ้งเตือนเมื่อบอทแอดเพื่อนหาคุณ · เปิดหน้านี้ค้างไว้ระหว่างรอคิว</div>" +
     '<button onclick="enableAlerts()">เปิดเตือน</button></div>';
+}
+async function testAlert(sec){
+  if (!alertsOn() || ("Notification" in window && Notification.permission === "default")) await enableAlerts();
+  unlockAudio();
+  const perm = "Notification" in window ? Notification.permission : "ไม่รองรับ";
+  const permTh = {granted: "อนุญาตแล้ว", denied: "ถูกบล็อก (เปิดในตั้งค่าเบราว์เซอร์ → การแจ้งเตือน)", "default": "ยังไม่ได้ตอบ"}[perm] || "เครื่องนี้ไม่รองรับ";
+  const fire = () => ringTurn("ทดสอบ: ถึงคิวคุณแล้ว!", "นี่คือตัวอย่างการแจ้งเตือน — ตอนถึงคิวจริงจะเด้งแบบนี้", true);
+  if (!sec) { fire(); note("testMsg", "เด้งแล้ว · แจ้งเตือนบนเครื่อง: " + permTh, "info"); return; }
+  note("testMsg", "อีก " + sec + " วินาทีจะเตือน — ลองสลับไปแอปอื่นหรือกดปิดจอดู · แจ้งเตือนบนเครื่อง: " + permTh, "info");
+  setTimeout(fire, sec * 1000);
 }
 function checkTurn(list){
   const LIVE = ["queued", "working", "wait_accept", "listing"];
