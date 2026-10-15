@@ -629,9 +629,10 @@ function icon(name, cls){
   const u = imgOf(name);
   return u ? '<img class="' + (cls || "iico") + '" src="' + u + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : "";
 }
-function priceTag(i){
+function priceTag(i){                          // ราคาหลัก = ต่อ 1,000 ชิ้น (คิดแบบเดียวกับตอนสั่ง)
+  const k = priceOf(i, 1000);
+  if (k != null) return fmt(k) + " บาท <small>/ 1,000 ชิ้น</small>";
   if (i.p500 > 0) return fmt(i.p500) + " บาท <small>/ 500 ชิ้น</small>";
-  if (i.p1000 > 0) return fmt(i.p1000) + " บาท <small>/ 1,000 ชิ้น</small>";
   return "";
 }
 function drawGrid(){
@@ -709,7 +710,8 @@ function calc(){
   const q = $("qbtns");
   q.innerHTML = c ? [500, 1000, 5000, 10000].filter(n => n <= c.available).map(n => '<button class="ghost small" type="button" onclick="setQty(' + n + ')">' + fmt(n) + "</button>").join("") : "";
   $("itemInfo").textContent = c
-    ? "มีของพร้อมส่ง " + fmt(c.available) + " ชิ้น · 500 ชิ้น " + fmt(c.p500) + " บาท" + (c.p1000 ? " · 1,000 ชิ้น " + fmt(c.p1000) + " บาท" : "") + (c.p10000 ? " · 10,000 ชิ้น " + fmt(c.p10000) + " บาท" : "") : "";
+    ? "มีของพร้อมส่ง " + fmt(c.available) + " ชิ้น" + (priceOf(c, 1000) != null ? " · 1,000 ชิ้น " + fmt(priceOf(c, 1000)) + " บาท" : "") +
+      (c.p500 > 0 ? " · 500 ชิ้น " + fmt(c.p500) + " บาท" : "") + (c.p10000 ? " · 10,000 ชิ้น " + fmt(c.p10000) + " บาท" : "") : "";
   const box = $("priceBox"), btn = $("bOrder");
   const tags = tagsIn();
   drawRows(tags); syncRows();
@@ -808,10 +810,18 @@ function tagOrderCard(list){
     (x.n > 1 ? ' <span class="muted">(' + x.n + " ออเดอร์)</span>" : "") + "</li>").join("") +
     '</ol><div class="muted" style="margin-top:6px">บอทส่งทีละแท็กตามลำดับนี้ · ถ้าแท็กไหนไม่กดรับเพื่อนใน 5 นาที แท็กนั้นจะถูกย้ายไปท้ายคิว</div></div>';
 }
+function etaText(min){
+  if (min == null) return "";
+  if (min <= 1) return "ใกล้ถึงคิวแล้ว";
+  const t = new Date(Date.now() + min * 60000), hm = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  const d = min < 60 ? min + " นาที" : Math.floor(min / 60) + " ชม." + (min % 60 ? " " + (min % 60) + " นาที" : "");
+  return "คาดว่าจะถึงคิวในอีก <b>~" + d + "</b> (ราว " + hm + " น.)";
+}
 function queueText(o){
   if (o.queuePos === 0) return "<b>ถึงคิวคุณแล้ว</b> — บอทกำลังส่งออเดอร์อื่นของคุณอยู่ ออเดอร์นี้ส่งต่อทันที";
   return "คุณอยู่<b>คิวที่ " + o.queuePos + "</b>" + (o.queueAhead ? " · รออีก <b>" + o.queueAhead + "</b> คิวก่อนถึงคุณ" : " · <b>คิวถัดไป</b>") +
-         '<div class="muted">ลำดับอาจขยับได้ ถ้าลูกค้าก่อนหน้าไม่กดรับเพื่อน จะถูกย้ายไปท้ายคิว</div>';
+         (o.queueAhead && o.etaMin != null ? "<div>" + etaText(o.etaMin) + "</div>" : "") +
+         '<div class="muted">เวลาเป็นค่าประมาณ · ลำดับอาจขยับได้ ถ้าลูกค้าก่อนหน้าไม่กดรับเพื่อน จะถูกย้ายไปท้ายคิว</div>';
 }
 
 /* ---------- QR พร้อมเพย์ + สลิป ---------- */
