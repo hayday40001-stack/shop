@@ -998,8 +998,26 @@ async function loadOrders(silent){
       '<div class="muted">' + esc(o.id) + " · " + esc(o.created) + " · ส่งให้ " + esc(o.tag) + "</div>" +
       '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="muted">ส่งแล้ว ' + fmt(o.delivered) + " / " + fmt(o.qty) + " ชิ้น</div>" +
       (o.status === "queued" && o.queuePos != null ? '<div class="qpos">' + queueText(o) + "</div>" : "") +
-      (o.message ? '<div style="margin-top:8px">' + esc(o.message) + "</div>" : "") + "</div>";
+      (o.message ? '<div style="margin-top:8px">' + esc(o.message) + "</div>" : "") +
+      (o.status === "queued" && o.canCancel === true
+        ? '<div style="margin-top:10px"><button class="ghost small" id="bc_' + esc(o.id) + '" onclick="cancelOrder(\'' + esc(o.id) + '\')">ยกเลิกออเดอร์ (คืนเงิน)</button></div>'
+        : o.status === "queued" && o.canCancel === false
+          ? '<div class="muted" style="margin-top:8px">ใกล้ถึงคิวแล้ว — ยกเลิกออเดอร์ไม่ได้</div>' : "") + "</div>";
   }).join("") : '<div class="card">' + emptyBox("i-box", "ยังไม่มีออเดอร์", "เลือกสินค้าที่ต้องการแล้วสั่งได้เลย", ["เริ่มสั่งซื้อ", "go('order')"]) + "</div>");
+}
+// ลูกค้ายกเลิกเอง: ได้เฉพาะออเดอร์ที่ยังไม่ใกล้ถึงคิว (เว็บหลังบ้านตรวจซ้ำอีกครั้ง) · คืนเงินเต็มเข้ากระเป๋า
+async function cancelOrder(id){
+  if (!confirm("ยกเลิกออเดอร์ " + id + "?\n\nเงินจะคืนเข้ากระเป๋าทันที (ยกเลิกแล้วกู้คืนไม่ได้)")) return;
+  const b = $("bc_" + id);
+  if (b) { b.disabled = true; b.textContent = "กำลังยกเลิก..."; }
+  try {
+    const d = await api("shop_cancel", {orderId: id});
+    if (ME && d.balance != null) { ME.balance = d.balance; paintMe(); }
+    alert("ยกเลิกออเดอร์ " + id + " แล้ว" + (d.refunded > 0 ? " · คืนเงิน " + fmt(d.refunded) + " บาท เข้ากระเป๋า" : ""));
+  } catch (e) {
+    alert(e.message);
+  }
+  loadOrders();
 }
 // ลูกค้ามีหลายแท็กค้างส่ง → บอกว่าแท็กไหนได้ก่อน (บอทส่งทีละแท็กตามคิว)
 function tagOrderCard(list){
