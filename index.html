@@ -639,13 +639,23 @@ function go(p){
   if (p === "order") loadCatalog();
   if (p === "acct") { fbRefresh(true); paintFb(); }
 }
-async function tick(){
+// ลดการเรียกเว็บ (Apps Script รับงานพร้อมกันได้จำกัด ลูกค้าเปิดค้างหลายคน = เว็บล่ม/ตอบ 404)
+// มีออเดอร์ค้าง: เช็กคิวทุก 15 วิ (เบื้องหลัง 30 วิ) · ไม่มีออเดอร์ค้าง: ทุก 60 วิ และหยุดถามเมื่อพับหน้าจอ
+let TICKN = 0;
+async function tick(force){
+  TICKN++;
+  const hid = document.hidden;
+  if (!force) {
+    if (hid && !HAS_ACTIVE) return;
+    if (hid && TICKN % 2) return;
+    if (!HAS_ACTIVE && curPage !== "orders" && TICKN % 4) return;
+  }
   try {                                         // หน้าอยู่เบื้องหลังก็ยังเช็กคิว (เพื่อแจ้งเตือนถึงคิว)
-    if (!document.hidden) { ME = (await api("shop_me")).user; paintMe(); }
-    await loadOrders(curPage !== "orders" || document.hidden);
+    if (!hid && (force || TICKN % 4 === 0)) { ME = (await api("shop_me")).user; paintMe(); }
+    await loadOrders(curPage !== "orders" || hid);
   } catch (e) {}
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN) { stopFlash(); tick(); wakeOn(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN) { stopFlash(); tick(true); wakeOn(); } });
 
 /* ---------- แจ้งเตือนถึงคิว (เสียง / สั่น / แจ้งเตือนเครื่อง / หน้าต่างเด้ง) ---------- */
 let AUDIO = null, SWREG = null, WAKE = null, FLASH = null, TITLE0 = document.title, HAS_ACTIVE = false;
