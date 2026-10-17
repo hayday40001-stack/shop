@@ -817,13 +817,19 @@ function checkTurn(list){
   HAS_ACTIVE = list.some(o => LIVE.indexOf(o.status) >= 0);
   if (HAS_ACTIVE) wakeOn(); else wakeOff();
   paintAlertCard();
+  // ถูกย้ายกลับไปรอคิว (ลูกค้าไม่รับเพื่อน/ติดขัด) → รอบหน้าเตือนใหม่ได้
+  let back = false;
+  list.forEach(x => { if (x.status === "queued") ["turn", "wait_accept"].forEach(k => { if (SEEN.delete(x.id + "|" + k)) back = true; }); });
+  if (back) saveSeen();
   const pick = st => list.find(o => o.status === st && !SEEN.has(o.id + "|" + st));
   let o;
   if ((o = pick("wait_accept"))) {
-    ring(list, o, "ถึงคิวคุณแล้ว! กดรับเพื่อนในเกม", "เปิด Hay Day → สมุดเพื่อน → คำขอ → กด 'รับ' ภายใน 5 นาที (แท็ก " + o.tag + ")", true);
-  } else if ((o = pick("working"))) {           // บอทเริ่มเตรียม (ยังไม่ส่งคำขอ) → เตือนเบาๆ ให้เปิดเกมรอ ไม่ดังเต็มที่
-    SEEN.add(o.id + "|working"); saveSeen();
-    sysNotify("ใกล้ถึงคิวแล้ว", "บอทกำลังเตรียมส่งให้แท็ก " + o.tag + " อีก 2-3 นาทีจะส่งคำขอเป็นเพื่อน เปิด Hay Day เตรียมไว้");
+    ring(list, o, "แอดเพื่อนแล้ว! กดรับในเกม", "เปิด Hay Day → สมุดเพื่อน → คำขอ → กด 'รับ' ภายใน 5 นาที (แท็ก " + o.tag + ")", true);
+  } else if ((o = list.find(x => x.status === "working" && x.turn && !SEEN.has(x.id + "|turn")))) {
+    // บอทกำลังจะแอดเพื่อน (เว็บได้สัญญาณจากบอท) → ถึงคิวแล้ว
+    list.forEach(x => { if (x.turn && tagKey(x.tag) === tagKey(o.tag)) SEEN.add(x.id + "|turn"); });
+    saveSeen();
+    ringTurn("ถึงคิวคุณแล้ว!", "บอทกำลังส่งคำขอเป็นเพื่อนหาแท็ก " + o.tag + " — เปิด Hay Day รอกด 'รับ' ได้เลย", true);
   } else if ((o = pick("listing"))) {
     ring(list, o, "ของวางขายแล้ว เข้าไปซื้อได้เลย", "เข้าฟาร์มของร้านที่เป็นเพื่อน → ร้านริมทาง → ซื้อทุกถาด", true);
   } else if ((o = list.find(x => x.status === "queued" && (x.queueNext || x.queuePos === 1) && !SEEN.has(x.id + "|next")))) {
