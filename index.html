@@ -821,8 +821,9 @@ function checkTurn(list){
   let o;
   if ((o = pick("wait_accept"))) {
     ring(list, o, "ถึงคิวคุณแล้ว! กดรับเพื่อนในเกม", "เปิด Hay Day → สมุดเพื่อน → คำขอ → กด 'รับ' ภายใน 5 นาที (แท็ก " + o.tag + ")", true);
-  } else if ((o = pick("working"))) {
-    ring(list, o, "ถึงคิวคุณแล้ว! เปิดเกมรอไว้เลย", "บอทกำลังแอดเพื่อนหาแท็ก " + o.tag + " — เปิด Hay Day แล้วรอกดรับคำขอเป็นเพื่อน", true);
+  } else if ((o = pick("working"))) {           // บอทเริ่มเตรียม (ยังไม่ส่งคำขอ) → เตือนเบาๆ ให้เปิดเกมรอ ไม่ดังเต็มที่
+    SEEN.add(o.id + "|working"); saveSeen();
+    sysNotify("ใกล้ถึงคิวแล้ว", "บอทกำลังเตรียมส่งให้แท็ก " + o.tag + " อีก 2-3 นาทีจะส่งคำขอเป็นเพื่อน เปิด Hay Day เตรียมไว้");
   } else if ((o = pick("listing"))) {
     ring(list, o, "ของวางขายแล้ว เข้าไปซื้อได้เลย", "เข้าฟาร์มของร้านที่เป็นเพื่อน → ร้านริมทาง → ซื้อทุกถาด", true);
   } else if ((o = list.find(x => x.status === "queued" && (x.queueNext || x.queuePos === 1) && !SEEN.has(x.id + "|next")))) {
