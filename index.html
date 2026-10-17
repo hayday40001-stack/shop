@@ -222,8 +222,9 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 .pp{display:flex;align-items:center;gap:10px;margin-bottom:var(--s2)}
 .pp .badge{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#1a3d6d;color:#fff}
 #qrBox{margin-top:var(--s4);padding:18px;border-radius:var(--r-lg);background:var(--bg2);text-align:center}
-#qrImg{display:inline-block;background:#fff;padding:14px;border-radius:var(--r-md);box-shadow:var(--shadow)}
-#qrImg img,#qrImg canvas{display:block;max-width:100%;height:auto}
+#qrImg,#payQR{display:inline-block;background:#fff;padding:14px;border-radius:var(--r-md);box-shadow:var(--shadow)}
+#payQR:empty{display:none}
+#qrImg img,#qrImg canvas,#payQR img,#payQR canvas{display:block;max-width:100%;height:auto}
 #qrAmtTxt{display:block;margin-top:10px;font-family:var(--f-display);font-size:1.2rem;font-weight:600}
 .drop{display:flex;align-items:center;gap:12px;padding:16px;border:2px dashed var(--line);border-radius:var(--r-md);background:var(--bg);cursor:pointer;
   transition:border-color .15s,background .15s;margin:0}
@@ -231,8 +232,8 @@ pre.pay{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding
 .drop .ic{width:28px;height:28px;color:var(--brand)}
 .drop span{font-weight:400;color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
 .drop b{display:block;color:var(--ink);font-weight:500}
-#slipFile{position:absolute;opacity:0;width:1px;height:1px;min-height:0;pointer-events:none}
-#slipFile:focus-visible + .drop{outline:3px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:2px}
+#slipFile,#paySlip{position:absolute;opacity:0;width:1px;height:1px;min-height:0;pointer-events:none}
+#slipFile:focus-visible + .drop,#paySlip:focus-visible + .drop{outline:3px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:2px}
 .divider{height:1px;background:var(--line);margin:var(--s5) 0 0}
 
 /* ----- หน้าต่างคำแนะนำ ----- */
@@ -482,6 +483,25 @@ a.btn.main{display:inline-flex;align-items:center;justify-content:center;min-hei
     <h3 id="turnTitle">ถึงคิวคุณแล้ว</h3>
     <p id="turnBody"></p>
     <button class="block" onclick="closeTurn()">รับทราบ</button>
+  </div>
+</div>
+<div id="payBg" class="guide-bg hide" onclick="if(event.target===this)closePay()">
+  <div class="guide" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+    <button class="x" onclick="closePay()" aria-label="ปิด"><svg class="ic"><use href="#i-x"/></svg></button>
+    <div class="gi" aria-hidden="true"><svg class="ic"><use href="#i-qr"/></svg></div>
+    <h3 id="payTitle">โอนส่วนที่ขาด แล้วสั่งซื้อ</h3>
+    <div id="paySum" class="muted"></div>
+    <label for="payAmt">ยอดที่จะโอน (บาท) <span class="hint" id="payMin"></span></label>
+    <input id="payAmt" type="number" inputmode="decimal" min="1" step="1" oninput="payQR()">
+    <div style="text-align:center;margin-top:12px"><div id="payQR"></div><b id="payAmtTxt" style="display:block;margin-top:8px"></b>
+      <div class="muted">สแกนด้วยแอปธนาคารไหนก็ได้ ยอดเงินขึ้นให้เอง</div></div>
+    <div class="divider"></div>
+    <label for="paySlip">โอนแล้ว แนบรูปสลิป</label>
+    <input id="paySlip" type="file" accept="image/*" onchange="paySlipPicked()">
+    <label for="paySlip" class="drop"><svg class="ic"><use href="#i-upload"/></svg><span id="paySlipName"><b>แตะเพื่อเลือกรูปสลิป</b>รองรับไฟล์รูปภาพ</span></label>
+    <div id="payMsg" role="status"></div>
+    <button id="bPay" class="block" style="margin-top:10px" onclick="payAndOrder()">ส่งสลิป แล้วสั่งซื้อ</button>
+    <p class="muted" id="payNote" style="margin-bottom:0"></p>
   </div>
 </div>
 <div id="guideBg" class="guide-bg hide" onclick="if(event.target===this)closeGuide()">
@@ -947,12 +967,17 @@ function calc(){
   const short = price - (ME ? ME.balance : 0);
   box.innerHTML = (tags.length > 1 ? "รวม " + fmt(sum) + " ชิ้น · " + tags.length + " แท็ก · " : "") + "ราคารวม <b>" + fmt(price) + " บาท</b>" +
     (short > 0 ? '<span class="short">ยอดเงินไม่พอ ขาดอีก ' + fmt(short) + ' บาท — <a href="#" onclick="go(\'wallet\');return false">เติมเงิน</a></span>' : "");
-  btn.disabled = short > 0;
-  btn.textContent = "สั่งซื้อ · หักเงิน " + fmt(price) + " บาท";
+  const canPay = short > 0 && !!SHOP.promptpay;          // เงินไม่พอ → โอนส่วนที่ขาดตอนสั่งได้เลย
+  btn.disabled = short > 0 && !canPay;
+  btn.textContent = canPay ? "โอน " + fmt(Math.ceil(short)) + " บาท แล้วสั่งซื้อ" : "สั่งซื้อ · หักเงิน " + fmt(price) + " บาท";
 }
 function setQty(n){ $("qty").value = n; calc(); }
 function stepQty(d){ const v = parseInt($("qty").value, 10) || 0; setQty(Math.max(500, Math.round((v + d * 500) / 500) * 500)); }
-async function doOrder(){
+function orderSummary(item, ls){
+  return item + (ls.length > 1 ? " · " + ls.map((l, i) => (i + 1) + ". " + l.tag + " " + fmt(l.qty)).join(" → ")
+                                : " " + fmt(ls[0].qty) + " ชิ้น → " + ls[0].tag);
+}
+async function doOrder(paid){
   const item = $("selItem").value, ls = lines();
   if (!ls.length) { note("orderMsg", "ใส่แท็กฟาร์มที่จะรับของก่อน", "err"); return; }
   const c = CATALOG.find(i => i.item === item);
@@ -960,7 +985,13 @@ async function doOrder(){
   for (const l of ls) { const p = priceOf(c, l.qty); if (p == null) return; price += p; }
   price = Math.round(price * 100) / 100;
   const multi = ls.length > 1;
-  if (!confirm("ยืนยันสั่ง " + item +
+  const short = Math.round((price - (ME ? ME.balance : 0)) * 100) / 100;
+  if (short > 0) {                             // เงินไม่พอ → เปิดหน้าต่างโอนส่วนที่ขาด (สลิปผ่าน → สั่งต่อให้ทันที)
+    if (!SHOP.promptpay) { note("orderMsg", "ยอดเงินไม่พอ ขาดอีก " + fmt(short) + " บาท", "err"); return; }
+    openPay(short, price, orderSummary(item, ls));
+    return;
+  }
+  if (paid !== true && !confirm("ยืนยันสั่ง " + item +
                (multi ? "\n\nลำดับการส่ง (แท็กแรกได้ก่อน):\n" + ls.map((l, i) => "  " + (i + 1) + ". " + l.tag + " — " + fmt(l.qty) + " ชิ้น").join("\n")
                       : " " + fmt(ls[0].qty) + " ชิ้น\nส่งให้ " + ls[0].tag) + "\n\nหักเงิน " + fmt(price) + " บาททันที")) return;
   busy("bOrder", true); note("orderMsg", "");
@@ -1073,6 +1104,62 @@ function ppPayload(id, amount){
   const p = f("00", "01") + f("01", amount ? "12" : "11") + f("29", f("00", "A000000677010111") + sub) +
             f("58", "TH") + f("53", "764") + (amount ? f("54", amount.toFixed(2)) : "") + "6304";
   return p + crc16(p);
+}
+/* ---------- โอนส่วนที่ขาดตอนสั่ง ---------- */
+let PAY = null;
+function openPay(short, price, summary){
+  const min = Math.ceil(short * 100) / 100;
+  PAY = {min: min, price: price, summary: summary};
+  $("paySum").innerHTML = esc(summary) + "<br>ราคา <b>" + fmt(price) + " บาท</b> · ในกระเป๋ามี " + fmt(ME ? ME.balance : 0) +
+                          ' บาท · <b style="color:var(--bad)">ขาด ' + fmt(min) + " บาท</b>";
+  $("payMin").textContent = "อย่างน้อย " + fmt(min) + " · โอนเกินได้ ส่วนที่เหลืออยู่ในกระเป๋า";
+  $("payAmt").value = Math.ceil(min);
+  $("payNote").textContent = SHOP.autoSlip
+    ? "สลิปผ่านการตรวจอัตโนมัติ → เงินเข้ากระเป๋า แล้วระบบสั่งซื้อให้ทันที (1 สลิปใช้ได้ครั้งเดียว)"
+    : "ส่งสลิปแล้วรอแอดมินตรวจ ยอดเข้าแล้วกลับมากดสั่งซื้ออีกครั้ง";
+  $("paySlip").value = ""; paySlipPicked(); note("payMsg", "");
+  payQR();
+  show("payBg", true);
+}
+function closePay(){ show("payBg", false); PAY = null; }
+function payQR(){
+  const amt = Math.round((parseFloat($("payAmt").value) || 0) * 100) / 100;
+  $("payQR").innerHTML = ""; $("payAmtTxt").textContent = "";
+  if (!PAY || !(amt >= PAY.min)) { note("payMsg", PAY ? "ยอดโอนต้องไม่น้อยกว่า " + fmt(PAY.min) + " บาท" : "", "err"); return; }
+  note("payMsg", "");
+  try {
+    new QRCode($("payQR"), {text: ppPayload(SHOP.promptpay, amt), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M});
+    $("payAmtTxt").textContent = "ยอดโอน " + fmt(amt) + " บาท";
+  } catch (e) { note("payMsg", "สร้าง QR ไม่ได้ (โหลดตัวสร้าง QR ไม่สำเร็จ) ลองรีเฟรชหน้า", "err"); }
+}
+function paySlipPicked(){
+  const f = $("paySlip").files[0];
+  $("paySlipName").innerHTML = f ? "<b>" + esc(f.name) + "</b>แตะเพื่อเปลี่ยนรูป" : "<b>แตะเพื่อเลือกรูปสลิป</b>รองรับไฟล์รูปภาพ";
+}
+async function payAndOrder(){
+  if (!PAY) return;
+  const f = $("paySlip").files[0];
+  const amt = Math.round((parseFloat($("payAmt").value) || 0) * 100) / 100;
+  if (!(amt >= PAY.min)) { note("payMsg", "ยอดโอนต้องไม่น้อยกว่า " + fmt(PAY.min) + " บาท", "err"); return; }
+  if (!f) { note("payMsg", "เลือกรูปสลิปก่อน", "err"); return; }
+  if (!/^image\//.test(f.type)) { note("payMsg", "ไฟล์นี้ไม่ใช่รูป", "err"); return; }
+  if (f.size > 15 * 1024 * 1024) { note("payMsg", "รูปใหญ่เกินไป", "err"); return; }
+  busy("bPay", true); note("payMsg", "กำลังตรวจสลิป...", "info");
+  try {
+    const slip = await shrinkImage(f);
+    const d = await api("shop_topup_slip", {slip: slip, amount: String(amt)});
+    if (d.status === "approved") {
+      ME.balance = d.balance; paintMe();
+      busy("bPay", false); closePay();
+      note("orderMsg", "เติมเงิน " + fmt(d.amount) + " บาทแล้ว — กำลังสั่งซื้อ...", "info");
+      await doOrder(true);
+      return;
+    }
+    note("payMsg", "ส่งสลิปแล้ว (" + d.id + ") รอแอดมินตรวจ" + (d.why ? " — " + d.why : "") +
+                   " · ยอดเข้าแล้วกดสั่งซื้ออีกครั้ง (ออเดอร์ยังไม่ถูกสั่ง)", "info");
+    $("paySlip").value = ""; paySlipPicked();
+  } catch (e) { note("payMsg", e.message, "err"); }
+  busy("bPay", false);
 }
 function makeQR(){
   const amt = Math.round((parseFloat($("qrAmt").value) || 0) * 100) / 100;
