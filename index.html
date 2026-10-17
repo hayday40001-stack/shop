@@ -830,6 +830,9 @@ function checkTurn(list){
     list.forEach(x => { if (x.turn && tagKey(x.tag) === tagKey(o.tag)) SEEN.add(x.id + "|turn"); });
     saveSeen();
     ringTurn("ถึงคิวคุณแล้ว!", "บอทกำลังส่งคำขอเป็นเพื่อนหาแท็ก " + o.tag + " — เปิด Hay Day รอกด 'รับ' ได้เลย", true);
+  } else if ((o = list.find(x => x.notice && x.notice.at && !SEEN.has(x.id + "|n" + x.notice.at)))) {
+    SEEN.add(o.id + "|n" + o.notice.at); saveSeen();         // บอทแจ้งระหว่างส่ง (เช่น ของยังวางไม่ครบ ให้รอก่อน)
+    sysNotify("แจ้งจากร้าน (" + o.tag + ")", o.notice.t);
   } else if ((o = pick("listing"))) {
     ring(list, o, "ของวางขายแล้ว เข้าไปซื้อได้เลย", "เข้าฟาร์มของร้านที่เป็นเพื่อน → ร้านริมทาง → ซื้อทุกถาด", true);
   } else if ((o = list.find(x => x.status === "queued" && (x.queueNext || x.queuePos === 1) && !SEEN.has(x.id + "|next")))) {
@@ -1033,7 +1036,7 @@ async function loadOrders(silent){
   try { list = (await api("shop_orders")).orders; } catch (e) { if (!silent) $("ordersBox").innerHTML = '<div class="msg err">โหลดออเดอร์ไม่ได้: ' + esc(e.message) + '</div><button class="ghost small" onclick="loadOrders()">ลองโหลดใหม่</button>'; return; }
   checkTurn(list);
   if (HAS_ACTIVE) fbRefresh();
-  const act = list.filter(o => o.status === "wait_accept" || o.status === "working");
+  const act = list.filter(o => o.status === "wait_accept" || o.status === "working" || (o.status === "listing" && o.notice));
   const qd = list.filter(o => o.status === "queued" && o.queuePos != null).sort((a, b) => a.queuePos - b.queuePos)[0];
   $("activeBanner").innerHTML = act.length
     ? '<div class="msg"><svg class="ic"><use href="#i-hand"/></svg><b>' + esc(act[0].message) + "</b></div>"
