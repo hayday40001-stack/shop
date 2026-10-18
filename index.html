@@ -486,6 +486,22 @@ a.btn.main{display:inline-flex;align-items:center;justify-content:center;min-hei
     <button class="block" onclick="closeTurn()">รับทราบ</button>
   </div>
 </div>
+<div id="gateBg" class="guide-bg hide" onclick="if(event.target===this)closeGate()">
+  <div class="guide" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <button class="x" onclick="closeGate()" aria-label="ปิด"><svg class="ic"><use href="#i-x"/></svg></button>
+    <div class="gi" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></div>
+    <h3 id="gateTitle">ผูก Messenger ก่อนสั่งซื้อ</h3>
+    <p class="muted" style="margin-top:0">ร้านแจ้งคิวทาง Messenger — ลูกค้าทุกคนต้องเปิดรับแจ้งเตือนก่อนสั่ง จะได้ไม่พลาดตอนถึงคิว</p>
+    <div id="gateState" class="msg info"></div>
+    <ol style="margin:10px 0 14px;padding-left:22px;line-height:1.7">
+      <li>กดปุ่มด้านล่าง → แชตกับเพจร้านจะเปิดขึ้น</li>
+      <li><b>พิมพ์อะไรก็ได้ส่งในแชต 1 ครั้ง</b> (เช่น "สวัสดี") หรือแตะปุ่ม 🔔 ที่เพจส่งมา</li>
+      <li>กลับมาหน้านี้ ระบบเช็กให้อัตโนมัติ ผ่านแล้วสั่งซื้อต่อทันที</li>
+    </ol>
+    <div id="gateBtn"></div>
+    <button class="ghost block" style="margin-top:8px" id="bGate" onclick="gateCheck(true)">ส่งข้อความแล้ว เช็กอีกครั้ง</button>
+  </div>
+</div>
 <div id="payBg" class="guide-bg hide" onclick="if(event.target===this)closePay()">
   <div class="guide" role="dialog" aria-modal="true" aria-labelledby="payTitle">
     <button class="x" onclick="closePay()" aria-label="ปิด"><svg class="ic"><use href="#i-x"/></svg></button>
@@ -555,7 +571,7 @@ async function boot(){
     const d = await api("shop_info");
     SHOP.payInfo = d.payInfo || "";
     SHOP.promptpay = d.promptpay || ""; SHOP.autoSlip = !!d.autoSlip; SHOP.contact = d.contact || "";
-    SHOP.signupBonus = d.signupBonus || null; SHOP.fb = !!d.fbEnabled; SHOP.fbRaw = d.fbEnabled;
+    SHOP.signupBonus = d.signupBonus || null; SHOP.fb = !!d.fbEnabled; SHOP.fbRaw = d.fbEnabled; SHOP.fbReq = !!d.fbRequired;
     paintPromo();
     if (d.shopName) { $("shopName").textContent = d.shopName; document.title = d.shopName; }
   } catch (e) { show("vAuth", true); note("authMsg", e.message, "err"); return; }
@@ -820,7 +836,7 @@ function fbHref(){
 async function fbPrefetch(){
   if (!SHOP.fb || !FB || (FB.linked && FB.windowOk)) return;
   if (FB_URL && Date.now() - FB_URL_AT < 2 * 3600 * 1000) return;
-  try { const d = await api("shop_fb_link"); FB_URL = d.url; FB_URL_AT = Date.now(); paintFb(); paintAlertCard(); } catch (e) {}
+  try { const d = await api("shop_fb_link"); FB_URL = d.url; FB_URL_AT = Date.now(); paintFb(); paintAlertCard(); if (GATE_OPEN) gatePaint(); } catch (e) {}
 }
 async function fbLink(){                        // ยังไม่มีลิงก์ → ขอแล้วพาไป Messenger ในแท็บนี้เลย
   try {
@@ -1026,6 +1042,10 @@ async function doOrder(paid){
   for (const l of ls) { const p = priceOf(c, l.qty); if (p == null) return; price += p; }
   price = Math.round(price * 100) / 100;
   const multi = ls.length > 1;
+  if (SHOP.fbReq && SHOP.fb) {                 // ร้านบังคับผูก Messenger → ยังไม่ผูก/รอบแจ้งเตือนหมด = ไปผูกก่อน
+    await fbRefresh(true);
+    if (!(FB && FB.linked && FB.windowOk)) { openGate(); return; }
+  }
   const short = Math.round((price - (ME ? ME.balance : 0)) * 100) / 100;
   if (short > 0) {                             // เงินไม่พอ → เปิดหน้าต่างโอนส่วนที่ขาด (สลิปผ่าน → สั่งต่อให้ทันที)
     if (!SHOP.promptpay) { note("orderMsg", "ยอดเงินไม่พอ ขาดอีก " + fmt(short) + " บาท", "err"); return; }
@@ -1146,6 +1166,39 @@ function ppPayload(id, amount){
             f("58", "TH") + f("53", "764") + (amount ? f("54", amount.toFixed(2)) : "") + "6304";
   return p + crc16(p);
 }
+/* ---------- บังคับผูก Messenger ก่อนสั่ง ---------- */
+let GATE_T = null, GATE_OPEN = false;
+function gatePaint(){
+  const linked = FB && FB.linked;
+  $("gateTitle").textContent = linked ? "เปิดรับแจ้งเตือนก่อนสั่งซื้อ" : "ผูก Messenger ก่อนสั่งซื้อ";
+  $("gateState").textContent = !FB ? "กำลังเช็กสถานะ…" : !linked ? "ยังไม่ได้ผูก Messenger"
+    : "ผูกแล้ว แต่รอบรับแจ้งเตือน 24 ชม. หมดแล้ว — ส่งข้อความในแชต 1 ครั้งเพื่อเปิดรอบใหม่";
+  const ready = FB_URL && Date.now() - FB_URL_AT < 2 * 3600 * 1000;   // ลิงก์พร้อม → เปิดแชตในแท็บใหม่ (ฟอร์มสั่งซื้อไม่หาย)
+  $("gateBtn").innerHTML = ready
+    ? '<a class="btn main" style="width:100%" href="' + esc(FB_URL) + '" target="_blank" rel="noopener">' + (linked ? "เปิดแชตกับเพจ" : "ผูก Messenger") + "</a>"
+    : '<button class="block" disabled>กำลังเตรียมลิงก์…</button>';
+}
+function openGate(){
+  GATE_OPEN = true;
+  gatePaint(); show("gateBg", true); fbPrefetch();
+  clearInterval(GATE_T);
+  GATE_T = setInterval(() => { if (!document.hidden) gateCheck(false); }, 6000);   // กลับมาจากแชตแล้วผ่านเอง
+}
+function closeGate(){ GATE_OPEN = false; show("gateBg", false); clearInterval(GATE_T); GATE_T = null; }
+async function gateCheck(manual){
+  if (manual) busy("bGate", true);
+  await fbRefresh(true);
+  if (manual) busy("bGate", false);
+  if (FB && FB.linked && FB.windowOk) {
+    closeGate();
+    note("orderMsg", "เปิดรับแจ้งเตือนทาง Messenger แล้ว ✓ — กำลังสั่งซื้อต่อ", "good");
+    doOrder();
+    return;
+  }
+  gatePaint();
+  if (manual) $("gateState").textContent += " · ยังไม่เห็นข้อความจากคุณ ลองพิมพ์ส่งในแชตอีกครั้ง แล้วรอ 5-10 วินาที";
+}
+
 /* ---------- โอนส่วนที่ขาดตอนสั่ง ---------- */
 let PAY = null;
 function openPay(short, price, summary){
