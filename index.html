@@ -459,6 +459,7 @@ a.btn.main{display:inline-flex;align-items:center;justify-content:center;min-hei
           <h2>แจ้งเตือนทาง Messenger</h2>
           <p class="muted" style="margin-top:-6px">ถึงคิวแล้วเพจร้านจะส่งข้อความหาคุณ แม้ปิดเว็บไปแล้ว</p>
           <div id="fbState" class="msg info">กำลังเช็ก…</div>
+          <div id="fbTimes" class="muted" style="margin:-4px 0 10px;line-height:1.6"></div>
           <div class="row"><span id="bFbWrap"><button id="bFb" onclick="fbLink()">ผูก Messenger</button></span><button class="ghost hide" id="bFbOff" onclick="fbUnlink()">ยกเลิกการผูก</button></div>
         </div>
         <h2>ทดสอบเสียงเตือนถึงคิว</h2>
@@ -774,6 +775,7 @@ function paintFb(){
   show("fbCard", !!SHOP.fb);
   if (!SHOP.fb) return;
   if (!FB) {                                    // ยังเช็กสถานะไม่ได้ (เน็ตสะดุด) → ยังกดผูกได้ + ปุ่มลองใหม่
+    $("fbTimes").innerHTML = "";
     if (!FB_ERR) return;
     $("fbState").className = "msg info";
     $("fbState").textContent = "เช็กสถานะการผูกไม่ได้ตอนนี้ (" + FB_ERR + ") — กดผูกได้เลย หรือกดลองใหม่";
@@ -786,7 +788,27 @@ function paintFb(){
     : FB.windowOk ? "ผูกแล้ว ✓ เปิดรับแจ้งเตือนอยู่ (ภายใน 24 ชม. หลังทักเพจล่าสุด)"
     : "ผูกแล้ว แต่ช่วงรับแจ้งเตือนหมดแล้ว — กด 'เปิดแจ้งเตือนรอบนี้' แล้วแตะปุ่มในแชต";
   $("bFbWrap").innerHTML = '<a class="btn main" ' + fbHref() + ">" + (FB.linked ? "เปิดแจ้งเตือนรอบนี้" : "ผูก Messenger") + "</a>";
+  $("fbTimes").innerHTML = fbTimesHtml();
   show("bFbOff", !!FB.linked);
+}
+// เวลาผูก / แจ้งเตือนได้ถึงเมื่อไร (เวลาจากเว็บ ปรับตามนาฬิกาเครื่องลูกค้า)
+function fbTimesHtml(){
+  if (!FB || !FB.linked) return "";
+  const off = FB.now ? FB.now - FB_AT : 0;          // นาฬิกาเว็บ - นาฬิกาเครื่อง (ตอนได้สถานะ)
+  const now = Date.now() + off;
+  const dt = ms => { const d = new Date(ms - off); return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") +
+                     " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + " น."; };
+  const left = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + " ชม. " + (m % 60) + " นาที" : m + " นาที"; };
+  const rows = [];
+  rows.push(FB.linkedAt ? "🔗 ผูกเมื่อ <b>" + dt(FB.linkedAt) + "</b>" : "🔗 ผูกไว้แล้ว (ผูกก่อนระบบบันทึกเวลา)");
+  if (FB.until && FB.until > now) {
+    rows.push("🔔 แจ้งเตือนได้ถึง <b>" + dt(FB.until) + "</b> (อีก " + left(FB.until - now) + ")");
+    rows.push("หลังเวลานี้ Facebook ไม่ให้เพจส่งข้อความ — กด 'เปิดแจ้งเตือนรอบนี้' แล้วแตะปุ่มในแชตอีกครั้ง (ไม่ต้องผูกใหม่)");
+  } else {
+    rows.push("⏰ รอบแจ้งเตือน" + (FB.until ? "หมดเมื่อ <b>" + dt(FB.until) + "</b>" : "ยังไม่ได้เปิด") +
+              " — กด 'เปิดแจ้งเตือนรอบนี้' แล้วแตะปุ่มในแชต จะแจ้งได้อีก 24 ชม.");
+  }
+  return rows.join("<br>");
 }
 // ลิงก์ผูก Messenger ขอไว้ล่วงหน้า → ปุ่มเป็นลิงก์จริง แตะแล้วเปิด Messenger ทันที (ไม่โดนเบราว์เซอร์บล็อก)
 let FB_URL = "", FB_URL_AT = 0, FB_ERR = "";
