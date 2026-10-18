@@ -757,7 +757,8 @@ let FB = null, FB_AT = 0;
 async function fbRefresh(force){
   if (!SHOP.fb || !TOKEN) return;
   if (!force && FB && Date.now() - FB_AT < 60000) return;
-  try { FB = await api("shop_fb_status"); FB_AT = Date.now(); } catch (e) { return; }
+  try { FB = await api("shop_fb_status"); FB_AT = Date.now(); FB_ERR = ""; }
+  catch (e) { FB_ERR = e.message || "เช็กไม่ได้"; paintFb(); return; }    // เช็กไม่ได้ → ยังโชว์ปุ่มผูกให้กดได้
   paintFb(); paintAlertCard(); fbPrefetch();
 }
 function paintFb(){
@@ -771,7 +772,15 @@ function paintFb(){
     return;
   }
   show("fbCard", !!SHOP.fb);
-  if (!SHOP.fb || !FB) return;
+  if (!SHOP.fb) return;
+  if (!FB) {                                    // ยังเช็กสถานะไม่ได้ (เน็ตสะดุด) → ยังกดผูกได้ + ปุ่มลองใหม่
+    if (!FB_ERR) return;
+    $("fbState").className = "msg info";
+    $("fbState").textContent = "เช็กสถานะการผูกไม่ได้ตอนนี้ (" + FB_ERR + ") — กดผูกได้เลย หรือกดลองใหม่";
+    $("bFbWrap").innerHTML = '<a class="btn main" ' + fbHref() + '>ผูก Messenger</a> <button class="ghost small" onclick="fbRefresh(true)">ลองใหม่</button>';
+    show("bFbOff", false);
+    return;
+  }
   $("fbState").className = "msg " + (FB.linked ? (FB.windowOk ? "good" : "info") : "info");
   $("fbState").textContent = !FB.linked ? "ยังไม่ได้ผูก — กด 'ผูก Messenger' แล้วกดเริ่มแชตกับเพจ"
     : FB.windowOk ? "ผูกแล้ว ✓ เปิดรับแจ้งเตือนอยู่ (ภายใน 24 ชม. หลังทักเพจล่าสุด)"
@@ -780,7 +789,7 @@ function paintFb(){
   show("bFbOff", !!FB.linked);
 }
 // ลิงก์ผูก Messenger ขอไว้ล่วงหน้า → ปุ่มเป็นลิงก์จริง แตะแล้วเปิด Messenger ทันที (ไม่โดนเบราว์เซอร์บล็อก)
-let FB_URL = "", FB_URL_AT = 0;
+let FB_URL = "", FB_URL_AT = 0, FB_ERR = "";
 function fbHref(){
   return FB_URL && Date.now() - FB_URL_AT < 2 * 3600 * 1000
     ? 'href="' + esc(FB_URL) + '" target="_blank" rel="noopener" onclick="setTimeout(() => fbRefresh(true), 15000)"'
